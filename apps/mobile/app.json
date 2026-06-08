@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Mobvex",
+    "slug": "mobvex",
+    "scheme": "mobvex",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0A0A0B",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mobvex.app"
+    },
+    "android": {
+      "package": "com.mobvex.app",
+      "edgeToEdgeEnabled": true,
+      "backgroundColor": "#0A0A0B"
+    },
+    "plugins": ["expo-router", "expo-font"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

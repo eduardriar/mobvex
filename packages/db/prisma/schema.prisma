@@ -1,0 +1,165 @@
+// Mobvex — Prisma schema
+//
+// Used as a SCHEMA/MIGRATION tool only. The app queries through supabase-js at
+// runtime (see packages/db/client.ts); Prisma is just how the Postgres tables
+// are defined and migrated.
+//
+// Conventions:
+//   - Tables and columns are snake_case (via @map / @@map) to match Supabase's
+//     generated types and packages/db/types.ts.
+//   - `id` is a uuid. `users.id` is expected to match Supabase Auth's
+//     auth.users.id — keep them in sync when creating profiles.
+//
+// NOTE: Prisma Migrate does NOT manage Row Level Security. The project requires
+// RLS on every table (trainers see only their students/routines; students see
+// only their own data). Add RLS policies in a separate Supabase SQL migration
+// after running `prisma migrate`.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  // Pooled connection (Supabase pgBouncer) for the app/runtime.
+  url       = env("DATABASE_URL")
+  // Direct connection for migrations (Supabase "Direct connection" string).
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  trainer
+  student
+}
+
+enum Goal {
+  weight_loss
+  muscle_gain
+  endurance
+}
+
+/// Base user — a trainer or a student. Extends Supabase Auth (auth.users).
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  role      Role
+  name      String
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  // A trainer has many students; a student-user has one student profile.
+  studentsAsTrainer  Student[]   @relation("TrainerStudents")
+  studentProfile     Student?    @relation("StudentUser")
+  routinesAsTrainer  Routine[]   @relation("TrainerRoutines")
+  nutritionAsTrainer Nutrition[] @relation("TrainerNutrition")
+
+  @@map("users")
+}
+
+/// A student linked to a trainer.
+model Student {
+  id        String   @id @default(uuid()) @db.Uuid
+  trainerId String   @map("trainer_id") @db.Uuid
+  userId    String   @unique @map("user_id") @db.Uuid
+  goal      Goal
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  trainer   User        @relation("TrainerStudents", fields: [trainerId], references: [id], onDelete: Cascade)
+  user      User        @relation("StudentUser", fields: [userId], references: [id], onDelete: Cascade)
+  routines  Routine[]
+  progress  Progress[]
+  nutrition Nutrition[]
+
+  @@index([trainerId])
+  @@map("students")
+}
+
+/// A routine assigned to a student.
+model Routine {
+  id          String   @id @default(uuid()) @db.Uuid
+  studentId   String   @map("student_id") @db.Uuid
+  trainerId   String   @map("trainer_id") @db.Uuid
+  name        String
+  description String?
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student   Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  trainer   User       @relation("TrainerRoutines", fields: [trainerId], references: [id], onDelete: Cascade)
+  exercises Exercise[]
+
+  @@index([studentId])
+  @@index([trainerId])
+  @@map("routines")
+}
+
+/// An exercise within a routine.
+model Exercise {
+  id          String  @id @default(uuid()) @db.Uuid
+  routineId   String  @map("routine_id") @db.Uuid
+  name        String
+  sets        Int
+  /// e.g. "10-12" or "to failure".
+  reps        String
+  restSeconds Int     @map("rest_seconds")
+  videoUrl    String? @map("video_url")
+  notes       String?
+  /// Position of the exercise within the routine.
+  order       Int     @map("order")
+
+  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+
+  @@index([routineId])
+  @@map("exercises")
+}
+
+/// A student progress record for a given day.
+model Progress {
+  id               String   @id @default(uuid()) @db.Uuid
+  studentId        String   @map("student_id") @db.Uuid
+  date             DateTime @db.Date
+  weightKg         Float?   @map("weight_kg")
+  bodyFatPct       Float?   @map("body_fat_pct")
+  photoUrl         String?  @map("photo_url")
+  targetCalories   Int?     @map("target_calories")
+  achievedCalories Int?     @map("achieved_calories")
+  notes            String?
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@map("progress")
+}
+
+/// A nutrition / diet plan assigned by a trainer to a student.
+model Nutrition {
+  id          String  @id @default(uuid()) @db.Uuid
+  studentId   String  @map("student_id") @db.Uuid
+  trainerId   String  @map("trainer_id") @db.Uuid
+  name        String
+  description String?
+
+  /// Daily targets the student should hit on this plan.
+  targetCalories Int? @map("target_calories")
+  proteinG       Int? @map("protein_g")
+  carbsG         Int? @map("carbs_g")
+  fatG           Int? @map("fat_g")
+  waterMl        Int? @map("water_ml")
+
+  /// Optional validity window for the plan.
+  startDate DateTime? @map("start_date") @db.Date
+  endDate   DateTime? @map("end_date") @db.Date
+
+  /// Only one plan is typically active per student at a time.
+  active    Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  trainer User    @relation("TrainerNutrition", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([studentId])
+  @@index([trainerId])
+  @@map("nutrition")
+}
