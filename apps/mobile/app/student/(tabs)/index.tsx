@@ -1,6 +1,8 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, Text, colors, spacing } from '@mobvex/ui';
+import { ActiveSessionBar } from '@/components/workout/ActiveSessionBar';
+import { useActiveSession } from '@/hooks/useActiveSession';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { TrainerStrip } from '@/components/dashboard/TrainerStrip';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -22,9 +24,17 @@ import {
   greeting,
 } from '@/components/dashboard/constants';
 
+// TODO: replace with the authenticated student's id once auth is wired.
+const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
+
 /** Student home / dashboard. */
 export default function Dashboard() {
   const router = useRouter();
+  const { session } = useActiveSession(TEMP_STUDENT_ID);
+
+  const completedSets =
+    session?.set_logs.filter((log) => log.completed).length ?? 0;
+  const totalSets = session?.set_logs.length ?? 0;
 
   return (
     <Screen flush scroll contentStyle={styles.content}>
@@ -63,14 +73,23 @@ export default function Dashboard() {
       <View style={[styles.block, styles.section]}>
         <SectionHeader title="Rutina de hoy" />
         <View style={styles.sectionBody}>
-          <TodayRoutineCard
-            day={TODAY_ROUTINE.day}
-            name={TODAY_ROUTINE.name}
-            meta={TODAY_ROUTINE.meta}
-            chips={TODAY_ROUTINE.chips}
-            status={TODAY_ROUTINE.status}
-            onPress={() => router.push('/student/routines')}
-          />
+          {session ? (
+            <ActiveSessionBar
+              routineName={session.routine.name}
+              completedSets={completedSets}
+              totalSets={totalSets}
+              onPress={() => router.push(`/student/workout/${session.id}`)}
+            />
+          ) : (
+            <TodayRoutineCard
+              day={TODAY_ROUTINE.day}
+              name={TODAY_ROUTINE.name}
+              meta={TODAY_ROUTINE.meta}
+              chips={TODAY_ROUTINE.chips}
+              status={TODAY_ROUTINE.status}
+              onPress={() => router.push('/student/routines')}
+            />
+          )}
         </View>
       </View>
 

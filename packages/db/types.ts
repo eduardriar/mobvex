@@ -42,18 +42,92 @@ export type Routine = {
   created_at: string;
 };
 
-/** An exercise within a routine. */
+/**
+ * A reusable exercise in the catalog. Defines only what the exercise *is* —
+ * prescription (sets/reps/rest/order) lives on RoutineExercise.
+ *
+ * `trainer_id` is null for the shared global catalog and set for a trainer's
+ * own private exercise.
+ */
 export type Exercise = {
   id: string;
-  routine_id: string;
+  trainer_id: string | null;
   name: string;
+  muscle_group?: string;
+  video_url?: string;
+  created_at: string;
+};
+
+/**
+ * Join row placing an exercise into a routine, carrying the prescription for
+ * that routine.
+ */
+export type RoutineExercise = {
+  id: string;
+  routine_id: string;
+  exercise_id: string;
+  /** Position of the exercise within the routine (0-based). */
+  order: number;
   sets: number;
   /** e.g. "10-12" or "to failure". */
   reps: string;
   rest_seconds: number;
-  video_url?: string;
   notes?: string;
-  order: number;
+};
+
+/** A prescription row together with the catalog exercise it points to. */
+export type RoutineExerciseWithExercise = RoutineExercise & {
+  exercise: Exercise;
+};
+
+/** A routine together with its prescribed exercises (joined select). */
+export type RoutineWithExercises = Routine & {
+  routine_exercises: RoutineExerciseWithExercise[];
+};
+
+export type SessionStatus = 'active' | 'completed' | 'abandoned';
+
+/**
+ * One instance of a student performing a routine. `active` is the current
+ * workout (at most one per student); completed/abandoned are kept as history.
+ */
+export type WorkoutSession = {
+  id: string;
+  student_id: string;
+  routine_id: string;
+  status: SessionStatus;
+  started_at: string;
+  completed_at?: string;
+  notes?: string;
+};
+
+/**
+ * One logged set within a session: actual weight, reps and effort (RIR — reps
+ * in reserve). Pre-created from the routine's prescription when a session
+ * starts, then filled in by the student.
+ */
+export type SetLog = {
+  id: string;
+  session_id: string;
+  routine_exercise_id: string;
+  /** 1-based position of the set within its exercise. */
+  set_number: number;
+  weight_kg?: number;
+  reps?: number;
+  rir?: number;
+  completed: boolean;
+  created_at: string;
+};
+
+/** A logged set together with the prescription/exercise it belongs to. */
+export type SetLogWithExercise = SetLog & {
+  routine_exercise: RoutineExerciseWithExercise;
+};
+
+/** The current active session with its routine and prescribed set logs. */
+export type ActiveSession = WorkoutSession & {
+  routine: Routine;
+  set_logs: SetLogWithExercise[];
 };
 
 /** A student progress record for a given day. */
@@ -63,10 +137,33 @@ export type Progress = {
   date: string;
   weight_kg?: number;
   body_fat_pct?: number;
+  /** Body measurements in centimeters. */
+  chest_cm?: number;
+  arm_cm?: number;
+  waist_cm?: number;
+  shoulder_cm?: number;
+  quads_cm?: number;
+  calf_cm?: number;
+  glutes_cm?: number;
   photo_url?: string;
   target_calories?: number;
   achieved_calories?: number;
   notes?: string;
+};
+
+export type PhotoPose = 'front' | 'left' | 'right' | 'back';
+
+/**
+ * Metadata for one progress photo. The image file lives in the
+ * `progress-photos` Storage bucket at `storage_path`.
+ */
+export type ProgressPhoto = {
+  id: string;
+  student_id: string;
+  date: string;
+  pose: PhotoPose;
+  storage_path: string;
+  created_at: string;
 };
 
 /**
@@ -75,5 +172,12 @@ export type Progress = {
  */
 export type NewStudent = Omit<Student, 'id' | 'created_at'>;
 export type NewRoutine = Omit<Routine, 'id' | 'created_at'>;
-export type NewExercise = Omit<Exercise, 'id'>;
+export type NewExercise = Omit<Exercise, 'id' | 'created_at'>;
+export type NewRoutineExercise = Omit<RoutineExercise, 'id'>;
 export type NewProgress = Omit<Progress, 'id'>;
+export type NewWorkoutSession = Omit<
+  WorkoutSession,
+  'id' | 'started_at' | 'status' | 'completed_at'
+>;
+export type NewSetLog = Omit<SetLog, 'id' | 'created_at' | 'completed'>;
+export type NewProgressPhoto = Omit<ProgressPhoto, 'id' | 'created_at'>;

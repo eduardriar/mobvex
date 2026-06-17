@@ -38,9 +38,22 @@ enum Goal {
   endurance
 }
 
+enum SessionStatus {
+  active
+  completed
+  abandoned
+}
+
+enum PhotoPose {
+  front
+  left
+  right
+  back
+}
+
 /// Base user — a trainer or a student. Extends Supabase Auth (auth.users).
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email     String   @unique
   role      Role
   name      String
@@ -52,24 +65,27 @@ model User {
   studentProfile     Student?    @relation("StudentUser")
   routinesAsTrainer  Routine[]   @relation("TrainerRoutines")
   nutritionAsTrainer Nutrition[] @relation("TrainerNutrition")
+  exercisesAsTrainer Exercise[]  @relation("TrainerExercises")
 
   @@map("users")
 }
 
 /// A student linked to a trainer.
 model Student {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   trainerId String   @map("trainer_id") @db.Uuid
   userId    String   @unique @map("user_id") @db.Uuid
   goal      Goal
   active    Boolean  @default(true)
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  trainer   User        @relation("TrainerStudents", fields: [trainerId], references: [id], onDelete: Cascade)
-  user      User        @relation("StudentUser", fields: [userId], references: [id], onDelete: Cascade)
-  routines  Routine[]
-  progress  Progress[]
-  nutrition Nutrition[]
+  trainer         User             @relation("TrainerStudents", fields: [trainerId], references: [id], onDelete: Cascade)
+  user            User             @relation("StudentUser", fields: [userId], references: [id], onDelete: Cascade)
+  routines        Routine[]
+  progress        Progress[]
+  nutrition       Nutrition[]
+  workoutSessions WorkoutSession[]
+  progressPhotos  ProgressPhoto[]
 
   @@index([trainerId])
   @@map("students")
@@ -77,7 +93,7 @@ model Student {
 
 /// A routine assigned to a student.
 model Routine {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   studentId   String   @map("student_id") @db.Uuid
   trainerId   String   @map("trainer_id") @db.Uuid
   name        String
@@ -85,42 +101,124 @@ model Routine {
   active      Boolean  @default(true)
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  student   Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  trainer   User       @relation("TrainerRoutines", fields: [trainerId], references: [id], onDelete: Cascade)
-  exercises Exercise[]
+  student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  trainer          User              @relation("TrainerRoutines", fields: [trainerId], references: [id], onDelete: Cascade)
+  routineExercises RoutineExercise[]
+  workoutSessions  WorkoutSession[]
 
   @@index([studentId])
   @@index([trainerId])
   @@map("routines")
 }
 
-/// An exercise within a routine.
+/// A reusable exercise in the catalog. Defines only what the exercise *is*
+/// (name, target muscle, demo video) — never how it is prescribed. Prescription
+/// (sets/reps/rest/order) lives on RoutineExercise.
+///
+/// `trainerId` makes ownership hybrid: NULL rows are the shared global catalog
+/// (seeded), while a set `trainerId` is a private exercise owned by one trainer.
 model Exercise {
-  id          String  @id @default(uuid()) @db.Uuid
-  routineId   String  @map("routine_id") @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainerId   String?  @map("trainer_id") @db.Uuid
   name        String
+  muscleGroup String?  @map("muscle_group")
+  videoUrl    String?  @map("video_url")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  trainer          User?             @relation("TrainerExercises", fields: [trainerId], references: [id], onDelete: Cascade)
+  routineExercises RoutineExercise[]
+
+  @@index([trainerId])
+  @@map("exercises")
+}
+
+/// Places a catalog Exercise into a Routine with the prescription for that
+/// routine. The same Exercise can appear in many routines, each with its own
+/// sets/reps/rest/order. Deleting a routine cascades these rows; an exercise
+/// still referenced here cannot be deleted (onDelete: Restrict).
+model RoutineExercise {
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  routineId   String  @map("routine_id") @db.Uuid
+  exerciseId  String  @map("exercise_id") @db.Uuid
+  order       Int
   sets        Int
-  /// e.g. "10-12" or "to failure".
   reps        String
   restSeconds Int     @map("rest_seconds")
-  videoUrl    String? @map("video_url")
   notes       String?
-  /// Position of the exercise within the routine.
-  order       Int     @map("order")
 
-  routine Routine @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
+  setLogs  SetLog[]
 
+  @@unique([routineId, order])
   @@index([routineId])
-  @@map("exercises")
+  @@index([exerciseId])
+  @@map("routine_exercises")
+}
+
+/// One instance of a student performing a routine. Status `active` is the
+/// student's current workout; only one active session per student is allowed
+/// (enforced by a partial unique index added in the migration). Completed and
+/// abandoned sessions are retained as training history.
+model WorkoutSession {
+  // gen_random_uuid() is a DB-level default so inserts via supabase-js (which
+  // bypass Prisma's client-side @default(uuid())) get an id.
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String        @map("student_id") @db.Uuid
+  routineId   String        @map("routine_id") @db.Uuid
+  status      SessionStatus @default(active)
+  startedAt   DateTime      @default(now()) @map("started_at") @db.Timestamptz(6)
+  completedAt DateTime?     @map("completed_at") @db.Timestamptz(6)
+  notes       String?
+
+  student Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  routine Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  setLogs SetLog[]
+
+  @@index([studentId])
+  @@index([routineId])
+  @@map("workout_sessions")
+}
+
+/// One logged set within a workout session: the actual weight, reps and effort
+/// (RIR — reps in reserve) the student performed for a prescribed exercise.
+/// Sets are pre-created from the routine's prescription when a session starts.
+model SetLog {
+  // DB-level default so supabase-js inserts get an id (see WorkoutSession).
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId         String   @map("session_id") @db.Uuid
+  routineExerciseId String   @map("routine_exercise_id") @db.Uuid
+  setNumber         Int      @map("set_number")
+  weightKg          Float?   @map("weight_kg")
+  reps              Int?
+  rir               Int?
+  completed         Boolean  @default(false)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  session         WorkoutSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  routineExercise RoutineExercise @relation(fields: [routineExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, routineExerciseId, setNumber])
+  @@index([sessionId])
+  @@index([routineExerciseId])
+  @@map("set_logs")
 }
 
 /// A student progress record for a given day.
 model Progress {
-  id               String   @id @default(uuid()) @db.Uuid
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   studentId        String   @map("student_id") @db.Uuid
   date             DateTime @db.Date
   weightKg         Float?   @map("weight_kg")
   bodyFatPct       Float?   @map("body_fat_pct")
+  // Body measurements in centimeters.
+  chestCm          Float?   @map("chest_cm")
+  armCm            Float?   @map("arm_cm")
+  waistCm          Float?   @map("waist_cm")
+  shoulderCm       Float?   @map("shoulder_cm")
+  quadsCm          Float?   @map("quads_cm")
+  calfCm           Float?   @map("calf_cm")
+  glutesCm         Float?   @map("glutes_cm")
   photoUrl         String?  @map("photo_url")
   targetCalories   Int?     @map("target_calories")
   achievedCalories Int?     @map("achieved_calories")
@@ -128,13 +226,33 @@ model Progress {
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
+  // One progress record per student per day — saveProgress upserts on this key.
+  @@unique([studentId, date])
   @@index([studentId])
   @@map("progress")
 }
 
+/// A progress photo for one pose on a given day. The image file lives in the
+/// `progress-photos` Storage bucket at `storagePath`; this row is the metadata.
+/// One photo per pose per day (re-uploading a pose replaces it via upsert).
+model ProgressPhoto {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String    @map("student_id") @db.Uuid
+  date        DateTime  @db.Date
+  pose        PhotoPose
+  storagePath String    @map("storage_path")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, date, pose])
+  @@index([studentId])
+  @@map("progress_photos")
+}
+
 /// A nutrition / diet plan assigned by a trainer to a student.
 model Nutrition {
-  id          String  @id @default(uuid()) @db.Uuid
+  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   studentId   String  @map("student_id") @db.Uuid
   trainerId   String  @map("trainer_id") @db.Uuid
   name        String

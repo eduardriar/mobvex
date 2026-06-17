@@ -11,11 +11,17 @@ export async function getProgressByStudent(studentId: string) {
     .returns<Progress[]>();
 }
 
-/** Save a daily progress entry (weight, measurements, photo, calories). */
+/**
+ * Save a daily progress entry (weight, measurements, photo, calories).
+ *
+ * One record per student per day: upserts on `(student_id, date)`. Re-saving the
+ * same day merges — only the fields present in `entry` are written, so blank
+ * fields keep their previously saved value.
+ */
 export async function saveProgress(entry: NewProgress) {
   return supabase
     .from('progress')
-    .insert(entry)
+    .upsert(entry, { onConflict: 'student_id,date' })
     .select()
     .single<Progress>();
 }

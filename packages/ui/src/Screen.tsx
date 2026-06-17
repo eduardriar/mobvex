@@ -3,6 +3,7 @@ import {
   ScrollView,
   StyleSheet,
   View,
+  type ScrollViewProps,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
@@ -16,6 +17,8 @@ type Props = {
   centered?: boolean;
   /** Remove the default 24px horizontal screen padding. */
   flush?: boolean;
+  /** Pull-to-refresh control. Only applies when `scroll` is enabled. */
+  refreshControl?: ScrollViewProps['refreshControl'];
   style?: StyleProp<ViewStyle>;
   contentStyle?: StyleProp<ViewStyle>;
 };
@@ -30,6 +33,7 @@ export function Screen({
   scroll = false,
   centered = false,
   flush = false,
+  refreshControl,
   style,
   contentStyle,
 }: Props) {
@@ -46,6 +50,7 @@ export function Screen({
           contentContainerStyle={[styles.scrollContent, padding]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          refreshControl={refreshControl}
         >
           {children}
         </ScrollView>

@@ -17,7 +17,17 @@
       "edgeToEdgeEnabled": true,
       "backgroundColor": "#0A0A0B"
     },
-    "plugins": ["expo-router", "expo-font"],
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Mobvex usa tus fotos para registrar tu progreso corporal.",
+          "cameraPermission": "Mobvex usa la cámara para tomar fotos de tu progreso corporal."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     }
