@@ -1,6 +1,14 @@
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Alert, Button, Screen, Text, colors, spacing } from '@mobvex/ui';
 import { saveProgress, type NewProgress } from '@mobvex/db';
@@ -47,6 +55,7 @@ const emptyForm = () =>
 
 export default function NewMeasurement() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { entries } = useProgress(TEMP_STUDENT_ID);
   const latest = entries[0];
 
@@ -85,71 +94,100 @@ export default function NewMeasurement() {
   };
 
   return (
-    <Screen scroll contentStyle={styles.content}>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text variant="label" style={styles.eyebrow}>
-            Registro de hoy
-          </Text>
-          <Text variant="title" style={styles.title}>
-            NUEVA MEDICIÓN
-          </Text>
-          <View style={styles.dateRow}>
-            <Feather name="calendar" size={14} color={colors.muted} />
-            <Text variant="subtitle">{dateLabel}</Text>
-          </View>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar"
-          hitSlop={8}
-          onPress={() => router.back()}
+    <Screen flush>
+      <KeyboardAvoidingView
+        style={styles.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        // Compensate for Screen's SafeAreaView top inset so the footer lands
+        // flush above the keyboard instead of behind it.
+        keyboardVerticalOffset={insets.top}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
         >
-          <Feather name="x" size={24} color={colors.muted} />
-        </Pressable>
-      </View>
+          <View style={styles.header}>
+            <View style={styles.headerText}>
+              <Text variant="label" style={styles.eyebrow}>
+                Registro de hoy
+              </Text>
+              <Text variant="title" style={styles.title}>
+                NUEVA MEDICIÓN
+              </Text>
+              <View style={styles.dateRow}>
+                <Feather name="calendar" size={14} color={colors.muted} />
+                <Text variant="subtitle">{dateLabel}</Text>
+              </View>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Cerrar"
+              hitSlop={8}
+              onPress={() => router.back()}
+            >
+              <Feather name="x" size={24} color={colors.muted} />
+            </Pressable>
+          </View>
 
-      {error ? (
-        <Alert message="No pudimos guardar la medición." style={styles.alert} />
-      ) : null}
+          {error ? (
+            <Alert message="No pudimos guardar la medición." style={styles.alert} />
+          ) : null}
 
-      <View style={styles.list}>
-        {FIELDS.map((field) => (
-          <MeasurementInputRow
-            key={field.key}
-            label={field.label}
-            unit={field.unit}
-            previous={latest?.[field.key]}
-            value={values[field.key]}
-            onChangeText={(text) =>
-              setValues((current) => ({ ...current, [field.key]: text }))
-            }
+          <View style={styles.list}>
+            {FIELDS.map((field) => (
+              <MeasurementInputRow
+                key={field.key}
+                label={field.label}
+                unit={field.unit}
+                previous={latest?.[field.key]}
+                value={values[field.key]}
+                onChangeText={(text) =>
+                  setValues((current) => ({ ...current, [field.key]: text }))
+                }
+              />
+            ))}
+          </View>
+
+          <Text variant="footnote" style={styles.hint}>
+            Deja en blanco lo que no midas hoy. Solo se guardan los campos
+            completados.
+          </Text>
+        </ScrollView>
+
+        {/* Floating action bar — stays above the keyboard. */}
+        <View style={styles.footer}>
+          <Button
+            label="GUARDAR MEDICIÓN"
+            variant="primary"
+            fullWidth
+            loading={saving}
+            disabled={!hasInput}
+            onPress={handleSave}
           />
-        ))}
-      </View>
-
-      <Text variant="footnote" style={styles.hint}>
-        Deja en blanco lo que no midas hoy. Solo se guardan los campos
-        completados.
-      </Text>
-
-      <Button
-        label="GUARDAR MEDICIÓN"
-        variant="primary"
-        fullWidth
-        loading={saving}
-        disabled={!hasInput}
-        onPress={handleSave}
-        style={styles.save}
-      />
+        </View>
+      </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
+  flex: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
     paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.lg,
+  },
+  footer: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    backgroundColor: colors.bg,
   },
   header: {
     flexDirection: 'row',

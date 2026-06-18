@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -14,7 +14,6 @@ import { WeightTrendCard } from '@/components/progress/WeightTrendCard';
 import { PhotoThumbnail } from '@/components/progress/PhotoThumbnail';
 import { MeasurementCard } from '@/components/progress/MeasurementCard';
 import { useProgress } from '@/hooks/useProgress';
-import { useProgressPhotoThumbs } from '@/hooks/useProgressPhotoThumbs';
 
 // TODO: replace with the authenticated student's id once auth is wired.
 const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
@@ -42,15 +41,12 @@ export default function Progress() {
   const router = useRouter();
   const { entries, loading, refreshing, error, refresh, reload } =
     useProgress(TEMP_STUDENT_ID);
-  const { thumbs, reload: reloadPhotos } =
-    useProgressPhotoThumbs(TEMP_STUDENT_ID);
 
   // Pick up freshly saved measurements / photos when returning to the tab.
   useFocusEffect(
     useCallback(() => {
       reload();
-      reloadPhotos();
-    }, [reload, reloadPhotos]),
+    }, [reload]),
   );
 
   const latest = entries[0];
@@ -64,26 +60,40 @@ export default function Progress() {
     return Math.round((a - b) * 10) / 10;
   };
 
+  useEffect(() => {
+  console.log(entries, null, 4)
+  }, [entries])
+
   // Weight series oldest → newest for the sparkline.
   const weights = [...entries]
     .reverse()
     .map((e) => e.weight_kg)
     .filter((w): w is number => w != null);
 
+  // Always show all measurement cards (same UI distribution); a card with no
+  // registered value renders a "—" placeholder instead of disappearing.
   const measurements = latest
     ? [
-        { label: 'Grasa corporal', value: latest.body_fat_pct, unit: '%', d: delta((p) => p.body_fat_pct) },
-        { label: 'Pecho', value: latest.chest_cm, unit: 'cm', d: delta((p) => p.chest_cm) },
-        { label: 'Brazo', value: latest.arm_cm, unit: 'cm', d: delta((p) => p.arm_cm) },
-        { label: 'Cintura', value: latest.waist_cm, unit: 'cm', d: delta((p) => p.waist_cm) },
-        { label: 'Hombro', value: latest.shoulder_cm, unit: 'cm', d: delta((p) => p.shoulder_cm) },
-        { label: 'Cuádriceps', value: latest.quads_cm, unit: 'cm', d: delta((p) => p.quads_cm) },
-        { label: 'Pantorrilla', value: latest.calf_cm, unit: 'cm', d: delta((p) => p.calf_cm) },
-        { label: 'Glúteos', value: latest.glutes_cm, unit: 'cm', d: delta((p) => p.glutes_cm) },
-      ].filter((m): m is typeof m & { value: number } => m.value != null)
+      { label: 'Grasa corporal', value: latest.body_fat_pct, unit: '%', d: delta((p) => p.body_fat_pct) },
+      { label: 'Pecho', value: latest.chest_cm, unit: 'cm', d: delta((p) => p.chest_cm) },
+      { label: 'Brazo', value: latest.arm_cm, unit: 'cm', d: delta((p) => p.arm_cm) },
+      { label: 'Cintura', value: latest.waist_cm, unit: 'cm', d: delta((p) => p.waist_cm) },
+      { label: 'Hombro', value: latest.shoulder_cm, unit: 'cm', d: delta((p) => p.shoulder_cm) },
+      { label: 'Cuádriceps', value: latest.quads_cm, unit: 'cm', d: delta((p) => p.quads_cm) },
+      { label: 'Pantorrilla', value: latest.calf_cm, unit: 'cm', d: delta((p) => p.calf_cm) },
+      { label: 'Glúteos', value: latest.glutes_cm, unit: 'cm', d: delta((p) => p.glutes_cm) },
+    ]
     : [];
 
-  console.log(latest)
+
+  if (loading) return <ActivityIndicator color={colors.accent} style={styles.loader} />
+  if (error) return <Alert message="No pudimos cargar tu progreso." style={styles.feedback} />
+  if (entries.length === 0) return (
+    <Text variant="subtitle" style={styles.feedback}>
+      Aún no tienes registros. Cuando registres tu peso, medidas o fotos,
+      aparecerán aquí.
+    </Text>
+  )
 
   return (
     <Screen
@@ -102,74 +112,63 @@ export default function Progress() {
         {'TU\nPROGRESO'}
       </Text>
       <Text variant="subtitle">Fotos y medidas corporales.</Text>
+      <>
+        <View style={styles.hero}>
+          <WeightTrendCard
+            weights={weights}
+            current={latest?.weight_kg}
+            delta={delta((p) => p.weight_kg)}
+          />
+        </View>
 
-      {loading ? (
-        <ActivityIndicator color={colors.accent} style={styles.loader} />
-      ) : error ? (
-        <Alert message="No pudimos cargar tu progreso." style={styles.feedback} />
-      ) : entries.length === 0 ? (
-        <Text variant="subtitle" style={styles.feedback}>
-          Aún no tienes registros. Cuando registres tu peso, medidas o fotos,
-          aparecerán aquí.
-        </Text>
-      ) : (
-        <>
-          {weights.length >= 2 && latest?.weight_kg != null ? (
-            <View style={styles.hero}>
-              <WeightTrendCard
-                weights={weights}
-                current={latest.weight_kg}
-                delta={delta((p) => p.weight_kg) ?? 0}
+        <View style={styles.section}>
+          <AddSectionHeader
+            title="Registro fotográfico"
+            onAdd={() => router.push('/student/photos')}
+          />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.photoRail}
+            style={styles.sectionBody}
+          >
+            {entries.map((entry, index) => (
+              <PhotoThumbnail
+                key={entry.id}
+                weekLabel={`Semana ${entries.length - index}`}
+                dateLabel={index === 0 ? relativeDays(entry.date) : formatDate(entry.date)}
+                hue={PHOTO_HUES[index % PHOTO_HUES.length]}
+                imageUrl={
+                  (entry.photos.find((p) => p.pose === 'front') ??
+                    entry.photos[0])?.url ?? null
+                }
+                active={index === 0}
+                onPress={() => router.push('/student/photos')}
               />
-            </View>
-          ) : null}
+            ))}
+          </ScrollView>
+        </View>
 
+        {measurements.length > 0 ? (
           <View style={styles.section}>
             <AddSectionHeader
-              title="Registro fotográfico"
-              onAdd={() => router.push('/student/photos')}
+              title="Medidas corporales"
+              onAdd={() => router.push('/student/measurement')}
             />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.photoRail}
-              style={styles.sectionBody}
-            >
-              {entries.map((entry, index) => (
-                <PhotoThumbnail
-                  key={entry.id}
-                  weekLabel={`Semana ${entries.length - index}`}
-                  dateLabel={index === 0 ? relativeDays(entry.date) : formatDate(entry.date)}
-                  hue={PHOTO_HUES[index % PHOTO_HUES.length]}
-                  imageUrl={thumbs.get(entry.date) ?? null}
-                  active={index === 0}
-                  onPress={() => router.push('/student/photos')}
+            <View style={[styles.sectionBody, styles.measureGrid]}>
+              {measurements.map((m) => (
+                <MeasurementCard
+                  key={m.label}
+                  label={m.label}
+                  value={m.value}
+                  unit={m.unit}
+                  delta={m.d}
                 />
               ))}
-            </ScrollView>
-          </View>
-
-          {measurements.length > 0 ? (
-            <View style={styles.section}>
-              <AddSectionHeader
-                title="Medidas corporales"
-                onAdd={() => router.push('/student/measurement')}
-              />
-              <View style={[styles.sectionBody, styles.measureGrid]}>
-                {measurements.map((m) => (
-                  <MeasurementCard
-                    key={m.label}
-                    label={m.label}
-                    value={m.value}
-                    unit={m.unit}
-                    delta={m.d}
-                  />
-                ))}
-              </View>
             </View>
-          ) : null}
-        </>
-      )}
+          </View>
+        ) : null}
+      </>
     </Screen>
   );
 }

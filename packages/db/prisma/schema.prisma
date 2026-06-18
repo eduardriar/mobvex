@@ -85,7 +85,6 @@ model Student {
   progress        Progress[]
   nutrition       Nutrition[]
   workoutSessions WorkoutSession[]
-  progressPhotos  ProgressPhoto[]
 
   @@index([trainerId])
   @@map("students")
@@ -224,7 +223,8 @@ model Progress {
   achievedCalories Int?     @map("achieved_calories")
   notes            String?
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  photos  ProgressPhoto[]
 
   // One progress record per student per day — saveProgress upserts on this key.
   @@unique([studentId, date])
@@ -232,21 +232,20 @@ model Progress {
   @@map("progress")
 }
 
-/// A progress photo for one pose on a given day. The image file lives in the
-/// `progress-photos` Storage bucket at `storagePath`; this row is the metadata.
-/// One photo per pose per day (re-uploading a pose replaces it via upsert).
+/// A progress photo for one pose, attached to a day's Progress record. The image
+/// file lives in the `progress-photos` Storage bucket at `storagePath`. At most
+/// four per progress entry — one per pose (enforced by the unique index).
 model ProgressPhoto {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId   String    @map("student_id") @db.Uuid
-  date        DateTime  @db.Date
+  progressId  String    @map("progress_id") @db.Uuid
   pose        PhotoPose
   storagePath String    @map("storage_path")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  progress Progress @relation(fields: [progressId], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, date, pose])
-  @@index([studentId])
+  @@unique([progressId, pose])
+  @@index([progressId])
   @@map("progress_photos")
 }
 
