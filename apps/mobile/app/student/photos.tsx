@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Alert as RNAlert, Pressable, StyleSheet, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -52,7 +52,21 @@ function base64ToBytes(base64: string): Uint8Array {
 export default function NewPhotos() {
   const router = useRouter();
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const { poses, error, upload } = usePhotoSession(TEMP_STUDENT_ID, today);
+  const { poses, error, upload, reset } = usePhotoSession(TEMP_STUDENT_ID, today);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Enable "Listo" only once every pose has a photo.
+  const allPosesCaptured = POSES.every((spec) => Boolean(poses[spec.pose].url));
+
+  const onDone = async () => {
+    setSubmitting(true);
+    // Simulate uploading the set of photos to the backend.
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    setSubmitting(false);
+    reset(); // clear the taken photos
+    RNAlert.alert('Fotos guardadas', 'Tus fotos de progreso se subieron.');
+    router.back()
+  };
 
   const dateLabel = useMemo(
     () =>
@@ -149,7 +163,9 @@ export default function NewPhotos() {
         label="LISTO"
         variant="secondary"
         fullWidth
-        onPress={() => router.back()}
+        loading={submitting}
+        disabled={!allPosesCaptured}
+        onPress={onDone}
         style={styles.done}
       />
     </Screen>

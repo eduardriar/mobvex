@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { getProgressByStudent, type Progress } from '@mobvex/db';
+import {
+  getProgressByStudent,
+  signedPhotoUrls,
+  type ProgressWithSignedPhotos,
+} from '@mobvex/db';
 
 type UseProgress = {
-  /** Progress entries, newest first. */
-  entries: Progress[];
+  /** Progress entries (with their photos as signed URLs), newest first. */
+  entries: ProgressWithSignedPhotos[];
   /** True during the initial load only. */
   loading: boolean;
   /** True during a user-triggered pull-to-refresh. */
@@ -15,19 +19,46 @@ type UseProgress = {
   reload: () => void;
 };
 
-/** Fetches a student's progress history (weight, body fat, photos, calories). */
+/**
+ * Fetch a student's progress history and resolve each entry's photos into signed
+ * display URLs in one batch.
+ */
+async function loadProgress(
+  studentId: string,
+): Promise<{ entries: ProgressWithSignedPhotos[]; error: string | null }> {
+  const { data, error } = await getProgressByStudent(studentId);
+
+  if (error) {
+    return { entries: [], error: error.message };
+  }
+
+  const rows = data ?? [];
+  const urls = await signedPhotoUrls(
+    rows.flatMap((row) => row.photos.map((photo) => photo.storage_path)),
+  );
+  const entries = rows.map((row) => ({
+    ...row,
+    photos: row.photos.map((photo) => ({
+      ...photo,
+      url: urls.get(photo.storage_path) ?? null,
+    })),
+  }));
+  return { entries, error: null };
+}
+
+/** A student's progress history (weight, body fat, measurements, photos). */
 export function useProgress(studentId: string): UseProgress {
-  const [entries, setEntries] = useState<Progress[]>([]);
+  const [entries, setEntries] = useState<ProgressWithSignedPhotos[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const applyResult = useCallback(
-    ({ data, error: queryError }: Awaited<ReturnType<typeof getProgressByStudent>>) => {
-      if (queryError) {
-        setError(queryError.message);
+  const apply = useCallback(
+    (result: Awaited<ReturnType<typeof loadProgress>>) => {
+      if (result.error) {
+        setError(result.error);
       } else {
-        setEntries(data ?? []);
+        setEntries(result.entries);
         setError(null);
       }
     },
@@ -38,28 +69,28 @@ export function useProgress(studentId: string): UseProgress {
     let active = true;
     setLoading(true);
 
-    getProgressByStudent(studentId).then((result) => {
+    loadProgress(studentId).then((result) => {
       if (!active) return;
-      applyResult(result);
+      apply(result);
       setLoading(false);
     });
 
     return () => {
       active = false;
     };
-  }, [studentId, applyResult]);
+  }, [studentId, apply]);
 
   const refresh = useCallback(() => {
     setRefreshing(true);
-    getProgressByStudent(studentId).then((result) => {
-      applyResult(result);
+    loadProgress(studentId).then((result) => {
+      apply(result);
       setRefreshing(false);
     });
-  }, [studentId, applyResult]);
+  }, [studentId, apply]);
 
   const reload = useCallback(() => {
-    getProgressByStudent(studentId).then(applyResult);
-  }, [studentId, applyResult]);
+    loadProgress(studentId).then(apply);
+  }, [studentId, apply]);
 
   return { entries, loading, refreshing, error, refresh, reload };
 }

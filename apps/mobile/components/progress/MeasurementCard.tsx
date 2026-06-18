@@ -4,7 +4,8 @@ import { TrendBadge } from './TrendBadge';
 
 type Props = {
   label: string;
-  value: number;
+  /** Undefined when the student hasn't registered this measurement yet. */
+  value?: number;
   unit: string;
   /** Net change across the series; omitted when there's nothing to compare. */
   delta?: number;
@@ -12,16 +13,22 @@ type Props = {
 
 /** A single body-measurement tile: label + trend on top, big value below. */
 export function MeasurementCard({ label, value, unit, delta }: Props) {
+  const hasValue = value != null;
+
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <Text style={styles.label}>{label}</Text>
-        {delta != null ? <TrendBadge delta={delta} /> : null}
+        {hasValue && delta != null ? <TrendBadge delta={delta} /> : null}
       </View>
-      <Text style={styles.value}>
-        {value}
-        <Text style={styles.unit}> {unit}</Text>
-      </Text>
+      {hasValue ? (
+        <Text style={styles.value}>
+          {value}
+          <Text style={styles.unit}> {unit}</Text>
+        </Text>
+      ) : (
+        <Text style={[styles.value, styles.empty]}>—</Text>
+      )}
     </View>
   );
 }
@@ -59,6 +66,9 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 14,
     fontWeight: '400',
+    color: colors.muted,
+  },
+  empty: {
     color: colors.muted,
   },
 });
