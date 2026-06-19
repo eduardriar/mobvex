@@ -138,6 +138,98 @@ function dateWeeksAgo(weeks: number): Date {
   return date;
 }
 
+type SeedRecipeItem = { food: string; qty: string };
+type SeedMealOption = { name: string; kcal: number; items: SeedRecipeItem[] };
+type SeedMeal = {
+  name: string;
+  time: string;
+  icon: string;
+  hue: string;
+  options: SeedMealOption[];
+};
+
+// Demo nutrition plan — mirrors apps/mobile/components/nutrition/diet.ts.
+const SEED_NUTRITION: {
+  name: string;
+  note: string;
+  targets: { kcal: number; protein: number; carbs: number; fat: number };
+  meals: SeedMeal[];
+} = {
+  name: 'Plan Definición',
+  note: 'Mantén el déficit suave entre semana y respeta las proteínas en cada comida. El sábado es tu comida libre.',
+  targets: { kcal: 2200, protein: 165, carbs: 220, fat: 65 },
+  meals: [
+    {
+      name: 'Desayuno', time: '07:30', icon: 'utensils', hue: 'orange',
+      options: [
+        { name: 'Avena y claras', kcal: 520, items: [
+          { food: 'Avena con leche', qty: '80 g' }, { food: 'Claras de huevo', qty: '6 uds' },
+          { food: 'Plátano', qty: '1 ud' }, { food: 'Mantequilla de maní', qty: '15 g' },
+        ] },
+        { name: 'Tostadas y aguacate', kcal: 510, items: [
+          { food: 'Pan integral', qty: '2 reb' }, { food: 'Huevo entero', qty: '2 uds' },
+          { food: 'Aguacate', qty: '1/2 ud' }, { food: 'Tomate', qty: 'libre' },
+        ] },
+        { name: 'Batido proteico', kcal: 500, items: [
+          { food: 'Proteína whey', qty: '30 g' }, { food: 'Avena', qty: '60 g' },
+          { food: 'Plátano', qty: '1 ud' }, { food: 'Leche desnatada', qty: '300 ml' },
+        ] },
+      ],
+    },
+    {
+      name: 'Almuerzo', time: '13:00', icon: 'utensils', hue: 'green',
+      options: [
+        { name: 'Pollo y arroz', kcal: 720, items: [
+          { food: 'Pechuga de pollo', qty: '200 g' }, { food: 'Arroz integral', qty: '120 g' },
+          { food: 'Verduras salteadas', qty: '150 g' }, { food: 'Aceite de oliva', qty: '10 ml' },
+        ] },
+        { name: 'Ternera y patata', kcal: 730, items: [
+          { food: 'Ternera magra', qty: '180 g' }, { food: 'Patata cocida', qty: '200 g' },
+          { food: 'Ensalada mixta', qty: 'libre' }, { food: 'Aceite de oliva', qty: '10 ml' },
+        ] },
+        { name: 'Pescado y quinoa', kcal: 700, items: [
+          { food: 'Merluza', qty: '220 g' }, { food: 'Quinoa', qty: '100 g' },
+          { food: 'Brócoli', qty: '150 g' }, { food: 'Aceite de oliva', qty: '10 ml' },
+        ] },
+      ],
+    },
+    {
+      name: 'Merienda', time: '17:00', icon: 'droplet', hue: 'blue',
+      options: [
+        { name: 'Yogur y frutos', kcal: 320, items: [
+          { food: 'Yogur griego', qty: '200 g' }, { food: 'Frutos rojos', qty: '80 g' },
+          { food: 'Almendras', qty: '20 g' },
+        ] },
+        { name: 'Tostada de pavo', kcal: 310, items: [
+          { food: 'Pan integral', qty: '1 reb' }, { food: 'Pavo', qty: '60 g' },
+          { food: 'Queso fresco', qty: '40 g' },
+        ] },
+        { name: 'Fruta y requesón', kcal: 300, items: [
+          { food: 'Manzana', qty: '1 ud' }, { food: 'Requesón', qty: '150 g' },
+          { food: 'Nueces', qty: '15 g' },
+        ] },
+      ],
+    },
+    {
+      name: 'Cena', time: '21:00', icon: 'utensils', hue: 'purple',
+      options: [
+        { name: 'Salmón y batata', kcal: 640, items: [
+          { food: 'Salmón', qty: '180 g' }, { food: 'Batata', qty: '150 g' },
+          { food: 'Ensalada verde', qty: 'libre' },
+        ] },
+        { name: 'Tortilla de verduras', kcal: 600, items: [
+          { food: 'Huevo entero', qty: '3 uds' }, { food: 'Verduras variadas', qty: '200 g' },
+          { food: 'Queso curado', qty: '30 g' },
+        ] },
+        { name: 'Pollo y ensalada', kcal: 620, items: [
+          { food: 'Pechuga de pollo', qty: '200 g' }, { food: 'Ensalada grande', qty: 'libre' },
+          { food: 'Aguacate', qty: '1/2 ud' },
+        ] },
+      ],
+    },
+  ],
+};
+
 async function main() {
   // 1. Global exercise catalog (trainer_id = null). Upsert by name so re-runs
   //    update muscle groups without duplicating rows.
@@ -265,10 +357,80 @@ async function main() {
     })),
   });
 
+  // 7. Nutrition: global recipe catalog + the demo plan with meals/options.
+  const recipeIdByName = new Map<string, string>();
+  const uniqueRecipes = new Map<string, SeedMealOption>();
+  for (const meal of SEED_NUTRITION.meals) {
+    for (const option of meal.options) {
+      if (!uniqueRecipes.has(option.name)) uniqueRecipes.set(option.name, option);
+    }
+  }
+
+  for (const [name, option] of uniqueRecipes) {
+    const existing = await prisma.recipe.findFirst({
+      where: { name, trainerId: null },
+    });
+    const recipe = existing
+      ? await prisma.recipe.update({ where: { id: existing.id }, data: { kcal: option.kcal } })
+      : await prisma.recipe.create({ data: { name, kcal: option.kcal } });
+    recipeIdByName.set(name, recipe.id);
+
+    await prisma.recipeItem.deleteMany({ where: { recipeId: recipe.id } });
+    await prisma.recipeItem.createMany({
+      data: option.items.map((item, index) => ({
+        recipeId: recipe.id,
+        food: item.food,
+        qty: item.qty,
+        order: index,
+      })),
+    });
+  }
+
+  // Rebuild the student's plan so re-running stays idempotent (cascades meals).
+  await prisma.nutrition.deleteMany({ where: { studentId: student.id } });
+  const plan = await prisma.nutrition.create({
+    data: {
+      studentId: student.id,
+      trainerId: trainer.id,
+      name: SEED_NUTRITION.name,
+      notes: SEED_NUTRITION.note,
+      targetCalories: SEED_NUTRITION.targets.kcal,
+      proteinG: SEED_NUTRITION.targets.protein,
+      carbsG: SEED_NUTRITION.targets.carbs,
+      fatG: SEED_NUTRITION.targets.fat,
+      active: true,
+    },
+  });
+
+  for (const [mealIndex, meal] of SEED_NUTRITION.meals.entries()) {
+    const firstOption = meal.options[0];
+    const createdMeal = await prisma.meal.create({
+      data: {
+        nutritionId: plan.id,
+        name: meal.name,
+        time: meal.time,
+        icon: meal.icon,
+        hue: meal.hue,
+        order: mealIndex,
+        // Default the student's choice to the first option.
+        selectedRecipeId: firstOption ? recipeIdByName.get(firstOption.name) : null,
+      },
+    });
+    await prisma.mealRecipe.createMany({
+      data: meal.options.map((option, index) => ({
+        mealId: createdMeal.id,
+        recipeId: recipeIdByName.get(option.name) as string,
+        order: index,
+      })),
+    });
+  }
+
   console.log(
     `Seeded ${EXERCISE_CATALOG.length} catalog exercises, ` +
-      `${SEED_ROUTINES.length} routines (${totalPrescriptions} prescriptions) and ` +
-      `${SEED_PROGRESS.length} progress entries for student ${student.id}.`,
+      `${SEED_ROUTINES.length} routines (${totalPrescriptions} prescriptions), ` +
+      `${SEED_PROGRESS.length} progress entries and the "${SEED_NUTRITION.name}" ` +
+      `nutrition plan (${uniqueRecipes.size} recipes, ${SEED_NUTRITION.meals.length} meals) ` +
+      `for student ${student.id}.`,
   );
 }
 

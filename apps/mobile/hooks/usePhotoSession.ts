@@ -1,10 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  getProgressPhotosByDate,
-  signedPhotoUrls,
-  uploadProgressPhoto,
-  type PhotoPose,
-} from '@mobvex/db';
+import { useCallback, useState } from 'react';
+import { signedPhotoUrls, uploadProgressPhoto, type PhotoPose } from '@mobvex/db';
 
 type PoseState = { url: string | null; uploading: boolean };
 type Poses = Record<PhotoPose, PoseState>;
@@ -26,49 +21,21 @@ type UsePhotoSession = {
     data: Uint8Array,
     contentType: string,
   ) => Promise<void>;
+  /** Clear all captured poses back to empty. */
+  reset: () => void;
 };
 
-/** Loads a day's existing photos (as signed URLs) and uploads new ones. */
+/**
+ * Tracks photos captured in the current session and uploads them. It does NOT
+ * load existing photos from the DB — the capture screen starts empty. To display
+ * a day's already-saved photos, use `useDayPhotos` / `loadDayPhotoUrls`.
+ */
 export function usePhotoSession(
   studentId: string | null,
   date: string,
 ): UsePhotoSession {
   const [poses, setPoses] = useState<Poses>(initialPoses);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setPoses(initialPoses());
-    if (!studentId) return;
-    let active = true;
-
-    (async () => {
-      const { data, error: queryError } = await getProgressPhotosByDate(
-        studentId,
-        date,
-      );
-      if (!active) return;
-      if (queryError) {
-        setError(queryError.message);
-        return;
-      }
-      const urls = await signedPhotoUrls((data ?? []).map((p) => p.storage_path));
-      if (!active) return;
-      setPoses((prev) => {
-        const next = { ...prev };
-        for (const photo of data ?? []) {
-          next[photo.pose] = {
-            url: urls.get(photo.storage_path) ?? null,
-            uploading: false,
-          };
-        }
-        return next;
-      });
-    })();
-
-    return () => {
-      active = false;
-    };
-  }, [studentId, date]);
 
   const upload = useCallback(
     async (pose: PhotoPose, data: Uint8Array, contentType: string) => {
@@ -104,5 +71,10 @@ export function usePhotoSession(
     [studentId, date],
   );
 
-  return { poses, error, upload };
+  const reset = useCallback(() => {
+    setPoses(initialPoses());
+    setError(null);
+  }, []);
+
+  return { poses, error, upload, reset };
 }

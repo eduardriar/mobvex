@@ -68,12 +68,12 @@ model User {
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   // A trainer has many students; a student-user has one student profile.
-  studentsAsTrainer    Student[]    @relation("TrainerStudents")
-  studentProfile       Student?     @relation("StudentUser")
-  routinesAsTrainer    Routine[]    @relation("TrainerRoutines")
-  nutritionAsTrainer   Nutrition[]  @relation("TrainerNutrition")
-  exercisesAsTrainer   Exercise[]   @relation("TrainerExercises")
-  invitationsAsTrainer Invitation[] @relation("TrainerInvitations")
+  studentsAsTrainer  Student[]   @relation("TrainerStudents")
+  studentProfile     Student?    @relation("StudentUser")
+  routinesAsTrainer  Routine[]   @relation("TrainerRoutines")
+  nutritionAsTrainer Nutrition[] @relation("TrainerNutrition")
+  exercisesAsTrainer Exercise[]  @relation("TrainerExercises")
+  recipesAsTrainer   Recipe[]    @relation("TrainerRecipes")
 
   @@map("users")
 }
@@ -93,7 +93,6 @@ model Student {
   progress        Progress[]
   nutrition       Nutrition[]
   workoutSessions WorkoutSession[]
-  progressPhotos  ProgressPhoto[]
 
   @@index([trainerId])
   @@map("students")
@@ -232,7 +231,8 @@ model Progress {
   achievedCalories Int?     @map("achieved_calories")
   notes            String?
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  student Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  photos  ProgressPhoto[]
 
   // One progress record per student per day — saveProgress upserts on this key.
   @@unique([studentId, date])
@@ -240,21 +240,20 @@ model Progress {
   @@map("progress")
 }
 
-/// A progress photo for one pose on a given day. The image file lives in the
-/// `progress-photos` Storage bucket at `storagePath`; this row is the metadata.
-/// One photo per pose per day (re-uploading a pose replaces it via upsert).
+/// A progress photo for one pose, attached to a day's Progress record. The image
+/// file lives in the `progress-photos` Storage bucket at `storagePath`. At most
+/// four per progress entry — one per pose (enforced by the unique index).
 model ProgressPhoto {
   id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId   String    @map("student_id") @db.Uuid
-  date        DateTime  @db.Date
+  progressId  String    @map("progress_id") @db.Uuid
   pose        PhotoPose
   storagePath String    @map("storage_path")
   createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  progress Progress @relation(fields: [progressId], references: [id], onDelete: Cascade)
 
-  @@unique([studentId, date, pose])
-  @@index([studentId])
+  @@unique([progressId, pose])
+  @@index([progressId])
   @@map("progress_photos")
 }
 
@@ -284,28 +283,82 @@ model Nutrition {
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   trainer User    @relation("TrainerNutrition", fields: [trainerId], references: [id], onDelete: Cascade)
+  meals   Meal[]
 
   @@index([studentId])
   @@index([trainerId])
   @@map("nutrition")
 }
 
-/// A trainer's invitation for a prospective student. The invite link carries
-/// `token`; resolving it shows the inviting trainer, and completing registration
-/// links the new student to that trainer and marks the invite accepted. May be
-/// pre-bound to an `email` and/or given an expiry.
-model Invitation {
-  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  trainerId  String           @map("trainer_id") @db.Uuid
-  token      String           @unique
-  email      String?
-  status     InvitationStatus @default(pending)
-  expiresAt  DateTime?        @map("expires_at") @db.Timestamptz(6)
-  acceptedAt DateTime?        @map("accepted_at") @db.Timestamptz(6)
-  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+/// A reusable recipe = a meal option (e.g. "Pollo y arroz", 720 kcal). Hybrid
+/// ownership like Exercise: NULL trainerId is the shared catalog; a set trainerId
+/// is a trainer's private recipe.
+model Recipe {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainerId String?  @map("trainer_id") @db.Uuid
+  name      String
+  kcal      Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  trainer User @relation("TrainerInvitations", fields: [trainerId], references: [id], onDelete: Cascade)
+  trainer         User?        @relation("TrainerRecipes", fields: [trainerId], references: [id], onDelete: Cascade)
+  recipeItems     RecipeItem[]
+  mealRecipes     MealRecipe[]
+  selectedInMeals Meal[]       @relation("SelectedRecipe")
 
   @@index([trainerId])
-  @@map("invitations")
+  @@map("recipes")
+}
+
+/// A food line within a recipe (e.g. "Pechuga de pollo" · "200 g").
+model RecipeItem {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipeId String @map("recipe_id") @db.Uuid
+  food     String
+  qty      String
+  order    Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, order])
+  @@index([recipeId])
+  @@map("recipe_items")
+}
+
+/// A meal slot within a nutrition plan (e.g. Desayuno @ 07:30). Offers several
+/// equivalent recipe options; the student picks one (selectedRecipeId, null ⇒
+/// the first option by order).
+model Meal {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nutritionId      String  @map("nutrition_id") @db.Uuid
+  name             String
+  time             String
+  icon             String
+  hue              String
+  order            Int
+  selectedRecipeId String? @map("selected_recipe_id") @db.Uuid
+
+  nutrition      Nutrition    @relation(fields: [nutritionId], references: [id], onDelete: Cascade)
+  selectedRecipe Recipe?      @relation("SelectedRecipe", fields: [selectedRecipeId], references: [id], onDelete: SetNull)
+  mealRecipes    MealRecipe[]
+
+  @@unique([nutritionId, order])
+  @@index([nutritionId])
+  @@map("meals")
+}
+
+/// Join: the recipe options available for a meal (the trainer's equivalents).
+model MealRecipe {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mealId   String @map("meal_id") @db.Uuid
+  recipeId String @map("recipe_id") @db.Uuid
+  order    Int
+
+  meal   Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  @@unique([mealId, recipeId])
+  @@unique([mealId, order])
+  @@index([mealId])
+  @@index([recipeId])
+  @@map("meal_recipes")
 }

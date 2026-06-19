@@ -177,18 +177,107 @@ export type InvitationWithTrainer = Invitation & {
 };
 
 /**
- * Metadata for one progress photo. The image file lives in the
- * `progress-photos` Storage bucket at `storage_path`.
+ * Metadata for one progress photo, attached to a day's Progress entry. The image
+ * file lives in the `progress-photos` Storage bucket at `storage_path`.
  */
 export type ProgressPhoto = {
   id: string;
-  student_id: string;
-  date: string;
+  progress_id: string;
   pose: PhotoPose;
   storage_path: string;
   created_at: string;
 };
 
+/** A trainer-assigned nutrition plan (daily targets + trainer note). */
+export type Nutrition = {
+  id: string;
+  student_id: string;
+  trainer_id: string;
+  name: string;
+  description?: string;
+  target_calories?: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fat_g?: number;
+  water_ml?: number;
+  start_date?: string;
+  end_date?: string;
+  active: boolean;
+  notes?: string;
+  created_at: string;
+};
+
+export type MealIcon = 'utensils' | 'droplet';
+export type MealHue = 'green' | 'purple' | 'orange' | 'blue' | 'pink';
+
+/**
+ * A reusable recipe = a meal option (name + kcal). `trainer_id` is null for the
+ * shared catalog and set for a trainer's private recipe.
+ */
+export type Recipe = {
+  id: string;
+  trainer_id: string | null;
+  name: string;
+  kcal: number;
+  created_at: string;
+};
+
+/** A food line within a recipe (e.g. "Pechuga de pollo" · "200 g"). */
+export type RecipeItem = {
+  id: string;
+  recipe_id: string;
+  food: string;
+  qty: string;
+  order: number;
+};
+
+/** A meal slot within a plan; offers several recipe options. */
+export type Meal = {
+  id: string;
+  nutrition_id: string;
+  name: string;
+  /** 24h time, e.g. "07:30". */
+  time: string;
+  icon: MealIcon;
+  hue: MealHue;
+  order: number;
+  /** The student's chosen option; null falls back to the first by order. */
+  selected_recipe_id?: string;
+};
+
+/** Join row: a recipe option available for a meal. */
+export type MealRecipe = {
+  id: string;
+  meal_id: string;
+  recipe_id: string;
+  order: number;
+};
+
+/** A recipe with its food items (joined select). */
+export type RecipeWithItems = Recipe & { recipe_items: RecipeItem[] };
+
+/** A meal option = the join row plus its recipe and items. */
+export type MealOption = MealRecipe & { recipe: RecipeWithItems };
+
+/** A meal together with its recipe options (ordered). */
+export type MealWithOptions = Meal & { meal_recipes: MealOption[] };
+
+/** A nutrition plan with its meals and each meal's options (joined select). */
+export type NutritionPlan = Nutrition & { meals: MealWithOptions[] };
+
+/** A photo together with its progress entry's date (for date-keyed display). */
+export type ProgressPhotoWithDate = ProgressPhoto & { date: string };
+
+/** A progress photo with a resolved (signed) display URL. */
+export type SignedProgressPhoto = ProgressPhoto & { url: string | null };
+
+/** A progress entry with its attached photos (joined select). */
+export type ProgressWithPhotos = Progress & { photos: ProgressPhoto[] };
+
+/** A progress entry whose photos carry signed display URLs. */
+export type ProgressWithSignedPhotos = Progress & {
+  photos: SignedProgressPhoto[];
+};
 /**
  * Insert payloads — the shape callers provide when creating a row. The database
  * fills `id` and `created_at`, so those are omitted here.
@@ -214,3 +303,8 @@ export type NewWorkoutSession = Omit<
 >;
 export type NewSetLog = Omit<SetLog, 'id' | 'created_at' | 'completed'>;
 export type NewProgressPhoto = Omit<ProgressPhoto, 'id' | 'created_at'>;
+export type NewNutrition = Omit<Nutrition, 'id' | 'created_at'>;
+export type NewRecipe = Omit<Recipe, 'id' | 'created_at'>;
+export type NewRecipeItem = Omit<RecipeItem, 'id'>;
+export type NewMeal = Omit<Meal, 'id'>;
+export type NewMealRecipe = Omit<MealRecipe, 'id'>;
