@@ -9,20 +9,10 @@ import {
   getStudentByUserId,
   saveProgress,
 } from '@mobvex/db';
-import type { Goal as DbGoal } from '@mobvex/db';
 import { StepHeader } from '@/components/register/StepHeader';
-import { GOALS, type Goal } from '@/components/register/constants';
+import { GOALS } from '@/components/register/constants';
 import { useRegister } from '@/components/register/RegisterContext';
 import { useAuth } from '@/components/auth/AuthProvider';
-
-// Interim mapping from the UI's 4 goals to the DB enum's 3. Task #8 reconciles
-// these into one source of truth; until then map to the closest match.
-const GOAL_TO_DB: Record<Goal, DbGoal> = {
-  muscle_gain: 'muscle_gain',
-  fat_loss: 'weight_loss',
-  performance: 'endurance',
-  general_health: 'endurance',
-};
 
 /** Step 4 — minimal profile before the account is created. */
 export default function Profile() {
@@ -80,7 +70,7 @@ export default function Profile() {
       const { data: studentRow, error: studentError } = await createStudent({
         trainer_id: trainerId,
         user_id: userId,
-        goal: GOAL_TO_DB[goal],
+        goal,
         active: true,
       });
       if (studentError || !studentRow) {

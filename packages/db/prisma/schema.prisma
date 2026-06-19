@@ -33,9 +33,10 @@ enum Role {
 }
 
 enum Goal {
-  weight_loss
   muscle_gain
-  endurance
+  fat_loss
+  performance
+  general_health
 }
 
 enum SessionStatus {

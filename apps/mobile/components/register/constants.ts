@@ -6,8 +6,12 @@
  * the data model stores a name but not a title/city.
  */
 
+// Goal is the single source of truth from the data model — re-exported so the
+// registration UI keeps importing it from here without redefining it.
+export type { Goal } from '@mobvex/db';
+import type { Goal } from '@mobvex/db';
+
 export type Channel = 'email' | 'whatsapp';
-export type Goal = 'muscle_gain' | 'fat_loss' | 'performance' | 'general_health';
 
 export const GOALS: { value: Goal; label: string }[] = [
   { value: 'muscle_gain', label: '💪 Ganar músculo' },
