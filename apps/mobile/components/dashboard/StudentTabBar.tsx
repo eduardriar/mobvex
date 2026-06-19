@@ -10,6 +10,8 @@ type TabConfig = {
 };
 
 // Keys are route names (English); labels are user-facing copy (Spanish).
+// Order here is the visible nav order: Inicio · Rutinas · Progreso · Dieta.
+// Routes without an entry (e.g. the retired `tips`) are skipped in the bar.
 const TABS: Record<string, TabConfig> = {
   index: { label: 'Inicio', icon: (c) => <Feather name="home" size={20} color={c} /> },
   routines: { label: 'Rutinas', icon: (c) => <Feather name="bar-chart-2" size={20} color={c} /> },

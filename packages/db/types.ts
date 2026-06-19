@@ -154,13 +154,12 @@ export type Progress = {
 export type PhotoPose = 'front' | 'left' | 'right' | 'back';
 
 /**
- * Metadata for one progress photo. The image file lives in the
- * `progress-photos` Storage bucket at `storage_path`.
+ * Metadata for one progress photo, attached to a day's Progress entry. The image
+ * file lives in the `progress-photos` Storage bucket at `storage_path`.
  */
 export type ProgressPhoto = {
   id: string;
-  student_id: string;
-  date: string;
+  progress_id: string;
   pose: PhotoPose;
   storage_path: string;
   created_at: string;
@@ -243,6 +242,20 @@ export type MealWithOptions = Meal & { meal_recipes: MealOption[] };
 /** A nutrition plan with its meals and each meal's options (joined select). */
 export type NutritionPlan = Nutrition & { meals: MealWithOptions[] };
 
+=======
+/** A photo together with its progress entry's date (for date-keyed display). */
+export type ProgressPhotoWithDate = ProgressPhoto & { date: string };
+
+/** A progress photo with a resolved (signed) display URL. */
+export type SignedProgressPhoto = ProgressPhoto & { url: string | null };
+
+/** A progress entry with its attached photos (joined select). */
+export type ProgressWithPhotos = Progress & { photos: ProgressPhoto[] };
+
+/** A progress entry whose photos carry signed display URLs. */
+export type ProgressWithSignedPhotos = Progress & {
+  photos: SignedProgressPhoto[];
+};
 /**
  * Insert payloads — the shape callers provide when creating a row. The database
  * fills `id` and `created_at`, so those are omitted here.
