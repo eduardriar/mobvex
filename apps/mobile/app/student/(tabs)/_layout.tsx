@@ -12,7 +12,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="routines" />
       <Tabs.Screen name="progress" />
       <Tabs.Screen name="tips" />
-      <Tabs.Screen name="recipes" />
+      <Tabs.Screen name="nutrition" />
     </Tabs>
   );
 }

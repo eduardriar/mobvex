@@ -83,8 +83,6 @@ export default function Progress() {
       ].filter((m): m is typeof m & { value: number } => m.value != null)
     : [];
 
-  console.log(latest)
-
   return (
     <Screen
       scroll
