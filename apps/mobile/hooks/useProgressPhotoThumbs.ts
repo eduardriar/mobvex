@@ -12,11 +12,15 @@ type UseProgressPhotoThumbs = {
  * `front` pose — used to overlay real photos onto the progress rail.
  */
 export function useProgressPhotoThumbs(
-  studentId: string,
+  studentId: string | null,
 ): UseProgressPhotoThumbs {
   const [thumbs, setThumbs] = useState<Map<string, string>>(new Map());
 
   const load = useCallback(async () => {
+    if (!studentId) {
+      setThumbs(new Map());
+      return;
+    }
     const { data, error } = await getProgressPhotos(studentId);
     if (error || !data) return;
 

@@ -15,9 +15,7 @@ import { PhotoThumbnail } from '@/components/progress/PhotoThumbnail';
 import { MeasurementCard } from '@/components/progress/MeasurementCard';
 import { useProgress } from '@/hooks/useProgress';
 import { useProgressPhotoThumbs } from '@/hooks/useProgressPhotoThumbs';
-
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 // Hue rotation for the photo tiles (newest first).
 const PHOTO_HUES: CategoryHue[] = ['green', 'purple', 'blue', 'orange', 'pink'];
@@ -40,10 +38,10 @@ function relativeDays(iso: string): string {
 
 export default function Progress() {
   const router = useRouter();
+  const { studentId } = useAuth();
   const { entries, loading, refreshing, error, refresh, reload } =
-    useProgress(TEMP_STUDENT_ID);
-  const { thumbs, reload: reloadPhotos } =
-    useProgressPhotoThumbs(TEMP_STUDENT_ID);
+    useProgress(studentId);
+  const { thumbs, reload: reloadPhotos } = useProgressPhotoThumbs(studentId);
 
   // Pick up freshly saved measurements / photos when returning to the tab.
   useFocusEffect(

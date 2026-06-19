@@ -6,9 +6,7 @@ import { Alert, Button, Screen, Text, colors, spacing } from '@mobvex/ui';
 import { saveProgress, type NewProgress } from '@mobvex/db';
 import { MeasurementInputRow } from '@/components/progress/MeasurementInputRow';
 import { useProgress } from '@/hooks/useProgress';
-
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 // Numeric measurement fields, in display order.
 type FieldKey =
@@ -47,7 +45,8 @@ const emptyForm = () =>
 
 export default function NewMeasurement() {
   const router = useRouter();
-  const { entries } = useProgress(TEMP_STUDENT_ID);
+  const { studentId } = useAuth();
+  const { entries } = useProgress(studentId);
   const latest = entries[0];
 
   const [values, setValues] = useState<Record<FieldKey, string>>(emptyForm);
@@ -64,8 +63,9 @@ export default function NewMeasurement() {
   const hasInput = FIELDS.some((f) => parseNumber(values[f.key]) != null);
 
   const handleSave = async () => {
+    if (!studentId) return;
     const payload: NewProgress = {
-      student_id: TEMP_STUDENT_ID,
+      student_id: studentId,
       date: today.toISOString().slice(0, 10),
     };
     for (const field of FIELDS) {

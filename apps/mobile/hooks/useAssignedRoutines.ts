@@ -13,7 +13,7 @@ type UseAssignedRoutines = {
 };
 
 /** Fetches the active routines (with their exercises) assigned to a student. */
-export function useAssignedRoutines(studentId: string): UseAssignedRoutines {
+export function useAssignedRoutines(studentId: string | null): UseAssignedRoutines {
   const [routines, setRoutines] = useState<RoutineWithExercises[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -32,6 +32,11 @@ export function useAssignedRoutines(studentId: string): UseAssignedRoutines {
   );
 
   useEffect(() => {
+    if (!studentId) {
+      setRoutines([]);
+      setLoading(false);
+      return;
+    }
     let active = true;
     setLoading(true);
 
@@ -47,6 +52,7 @@ export function useAssignedRoutines(studentId: string): UseAssignedRoutines {
   }, [studentId, applyResult]);
 
   const refresh = useCallback(() => {
+    if (!studentId) return;
     setRefreshing(true);
     getAssignedRoutines(studentId).then((result) => {
       applyResult(result);

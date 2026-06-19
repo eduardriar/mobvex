@@ -30,15 +30,16 @@ type UsePhotoSession = {
 
 /** Loads a day's existing photos (as signed URLs) and uploads new ones. */
 export function usePhotoSession(
-  studentId: string,
+  studentId: string | null,
   date: string,
 ): UsePhotoSession {
   const [poses, setPoses] = useState<Poses>(initialPoses);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    let active = true;
     setPoses(initialPoses());
+    if (!studentId) return;
+    let active = true;
 
     (async () => {
       const { data, error: queryError } = await getProgressPhotosByDate(
@@ -71,6 +72,7 @@ export function usePhotoSession(
 
   const upload = useCallback(
     async (pose: PhotoPose, data: Uint8Array, contentType: string) => {
+      if (!studentId) return;
       setError(null);
       setPoses((prev) => ({
         ...prev,

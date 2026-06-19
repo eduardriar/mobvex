@@ -16,7 +16,7 @@ type UseProgress = {
 };
 
 /** Fetches a student's progress history (weight, body fat, photos, calories). */
-export function useProgress(studentId: string): UseProgress {
+export function useProgress(studentId: string | null): UseProgress {
   const [entries, setEntries] = useState<Progress[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,6 +35,11 @@ export function useProgress(studentId: string): UseProgress {
   );
 
   useEffect(() => {
+    if (!studentId) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
     let active = true;
     setLoading(true);
 
@@ -50,6 +55,7 @@ export function useProgress(studentId: string): UseProgress {
   }, [studentId, applyResult]);
 
   const refresh = useCallback(() => {
+    if (!studentId) return;
     setRefreshing(true);
     getProgressByStudent(studentId).then((result) => {
       applyResult(result);
@@ -58,6 +64,7 @@ export function useProgress(studentId: string): UseProgress {
   }, [studentId, applyResult]);
 
   const reload = useCallback(() => {
+    if (!studentId) return;
     getProgressByStudent(studentId).then(applyResult);
   }, [studentId, applyResult]);
 
