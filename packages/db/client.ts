@@ -2,6 +2,9 @@ import { createClient } from '@supabase/supabase-js';
 
 import { sessionStorage } from './storage';
 
+/** Re-exported so apps can type auth state without depending on supabase-js directly. */
+export type { Session } from '@supabase/supabase-js';
+
 /**
  * The single Supabase client for the whole monorepo. Import `supabase` from here
  * — never call `createClient` anywhere else.

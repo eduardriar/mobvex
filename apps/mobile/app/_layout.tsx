@@ -4,6 +4,7 @@ import { useFonts } from 'expo-font';
 import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import { DMSans_400Regular } from '@expo-google-fonts/dm-sans';
 import { colors } from '@mobvex/ui';
+import { AuthProvider } from '../components/auth/AuthProvider';
 
 export default function RootLayout() {
   // Token font families ('BebasNeue', 'DMSans') must match these keys.
@@ -17,7 +18,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <AuthProvider>
       <StatusBar style="light" />
       <Stack
         screenOptions={{
@@ -26,6 +27,6 @@ export default function RootLayout() {
           contentStyle: { backgroundColor: colors.bg },
         }}
       />
-    </>
+    </AuthProvider>
   );
 }
