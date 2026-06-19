@@ -11,14 +11,22 @@ import {
 } from '@mobvex/db';
 import { StepHeader } from '@/components/register/StepHeader';
 import { GOALS } from '@/components/register/constants';
+import {
+  validateBirthdate,
+  validateHeight,
+  validateName,
+  validateWeight,
+} from '@/components/register/validation';
 import { useRegister } from '@/components/register/RegisterContext';
 import { useAuth } from '@/components/auth/AuthProvider';
+
+type FieldKey = 'name' | 'weight' | 'height' | 'birthdate';
 
 /** Step 4 — minimal profile before the account is created. */
 export default function Profile() {
   const router = useRouter();
-  // height & birthdate are collected into the draft but have no column in the
-  // current schema, so they are not persisted yet (see task note).
+  // height & birthdate are collected (and validated) into the draft but have no
+  // column in the current schema, so they are not persisted yet (see task note).
   const {
     name,
     weight,
@@ -33,9 +41,27 @@ export default function Profile() {
   const { session } = useAuth();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<FieldKey, string>>
+  >({});
+
+  const clearError = (key: FieldKey) =>
+    setFieldErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
+
+  const validate = (): boolean => {
+    const next: Partial<Record<FieldKey, string>> = {
+      name: validateName(name) ?? undefined,
+      weight: validateWeight(weight) ?? undefined,
+      height: validateHeight(height) ?? undefined,
+      birthdate: validateBirthdate(birthdate) ?? undefined,
+    };
+    setFieldErrors(next);
+    return !next.name && !next.weight && !next.height && !next.birthdate;
+  };
 
   const handleCreate = async () => {
     setError(null);
+    if (!validate()) return;
 
     const userId = session?.user?.id;
     const email = session?.user?.email ?? contact.trim();
@@ -112,7 +138,11 @@ export default function Profile() {
           label="Nombre completo"
           placeholder="Juan Pérez"
           value={name}
-          onChangeText={(t) => update({ name: t })}
+          error={fieldErrors.name}
+          onChangeText={(t) => {
+            update({ name: t });
+            clearError('name');
+          }}
         />
 
         <View style={styles.row}>
@@ -123,7 +153,11 @@ export default function Profile() {
             keyboardType="numeric"
             suffix="kg"
             value={weight}
-            onChangeText={(t) => update({ weight: t })}
+            error={fieldErrors.weight}
+            onChangeText={(t) => {
+              update({ weight: t });
+              clearError('weight');
+            }}
           />
           <Input
             containerStyle={styles.rowItem}
@@ -132,7 +166,11 @@ export default function Profile() {
             keyboardType="numeric"
             suffix="cm"
             value={height}
-            onChangeText={(t) => update({ height: t })}
+            error={fieldErrors.height}
+            onChangeText={(t) => {
+              update({ height: t });
+              clearError('height');
+            }}
           />
         </View>
 
@@ -140,7 +178,11 @@ export default function Profile() {
           label="Fecha de nacimiento"
           placeholder="DD / MM / AAAA"
           value={birthdate}
-          onChangeText={(t) => update({ birthdate: t })}
+          error={fieldErrors.birthdate}
+          onChangeText={(t) => {
+            update({ birthdate: t });
+            clearError('birthdate');
+          }}
         />
 
         <View>
@@ -168,7 +210,6 @@ export default function Profile() {
         label="CREAR CUENTA"
         fullWidth
         loading={saving}
-        disabled={!name.trim()}
         style={styles.cta}
         onPress={handleCreate}
       />
