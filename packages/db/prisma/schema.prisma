@@ -66,6 +66,7 @@ model User {
   routinesAsTrainer  Routine[]   @relation("TrainerRoutines")
   nutritionAsTrainer Nutrition[] @relation("TrainerNutrition")
   exercisesAsTrainer Exercise[]  @relation("TrainerExercises")
+  recipesAsTrainer   Recipe[]    @relation("TrainerRecipes")
 
   @@map("users")
 }
@@ -275,8 +276,82 @@ model Nutrition {
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
   trainer User    @relation("TrainerNutrition", fields: [trainerId], references: [id], onDelete: Cascade)
+  meals   Meal[]
 
   @@index([studentId])
   @@index([trainerId])
   @@map("nutrition")
+}
+
+/// A reusable recipe = a meal option (e.g. "Pollo y arroz", 720 kcal). Hybrid
+/// ownership like Exercise: NULL trainerId is the shared catalog; a set trainerId
+/// is a trainer's private recipe.
+model Recipe {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainerId String?  @map("trainer_id") @db.Uuid
+  name      String
+  kcal      Int
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  trainer         User?        @relation("TrainerRecipes", fields: [trainerId], references: [id], onDelete: Cascade)
+  recipeItems     RecipeItem[]
+  mealRecipes     MealRecipe[]
+  selectedInMeals Meal[]       @relation("SelectedRecipe")
+
+  @@index([trainerId])
+  @@map("recipes")
+}
+
+/// A food line within a recipe (e.g. "Pechuga de pollo" · "200 g").
+model RecipeItem {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  recipeId String @map("recipe_id") @db.Uuid
+  food     String
+  qty      String
+  order    Int
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@unique([recipeId, order])
+  @@index([recipeId])
+  @@map("recipe_items")
+}
+
+/// A meal slot within a nutrition plan (e.g. Desayuno @ 07:30). Offers several
+/// equivalent recipe options; the student picks one (selectedRecipeId, null ⇒
+/// the first option by order).
+model Meal {
+  id               String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nutritionId      String  @map("nutrition_id") @db.Uuid
+  name             String
+  time             String
+  icon             String
+  hue              String
+  order            Int
+  selectedRecipeId String? @map("selected_recipe_id") @db.Uuid
+
+  nutrition      Nutrition    @relation(fields: [nutritionId], references: [id], onDelete: Cascade)
+  selectedRecipe Recipe?      @relation("SelectedRecipe", fields: [selectedRecipeId], references: [id], onDelete: SetNull)
+  mealRecipes    MealRecipe[]
+
+  @@unique([nutritionId, order])
+  @@index([nutritionId])
+  @@map("meals")
+}
+
+/// Join: the recipe options available for a meal (the trainer's equivalents).
+model MealRecipe {
+  id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mealId   String @map("meal_id") @db.Uuid
+  recipeId String @map("recipe_id") @db.Uuid
+  order    Int
+
+  meal   Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+
+  @@unique([mealId, recipeId])
+  @@unique([mealId, order])
+  @@index([mealId])
+  @@index([recipeId])
+  @@map("meal_recipes")
 }

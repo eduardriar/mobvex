@@ -85,7 +85,6 @@ export default function Progress() {
     ]
     : [];
 
-
   if (loading) return <ActivityIndicator color={colors.accent} style={styles.loader} />
   if (error) return <Alert message="No pudimos cargar tu progreso." style={styles.feedback} />
   if (entries.length === 0) return (
@@ -94,7 +93,7 @@ export default function Progress() {
       aparecerán aquí.
     </Text>
   )
-
+        
   return (
     <Screen
       scroll
