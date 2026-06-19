@@ -170,6 +170,12 @@ export type ProgressPhoto = {
  * Insert payloads — the shape callers provide when creating a row. The database
  * fills `id` and `created_at`, so those are omitted here.
  */
+/**
+ * A new user row. Unlike most inserts, `id` is provided by the caller — it must
+ * equal the Supabase Auth user id (`auth.uid()`) so the profile and auth user
+ * stay linked. The database fills `created_at`.
+ */
+export type NewUser = Omit<User, 'created_at'>;
 export type NewStudent = Omit<Student, 'id' | 'created_at'>;
 export type NewRoutine = Omit<Routine, 'id' | 'created_at'>;
 export type NewExercise = Omit<Exercise, 'id' | 'created_at'>;
