@@ -2,11 +2,12 @@ import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Screen, Text, colors, overlays, spacing } from '@mobvex/ui';
 import { TrainerCard } from '@/components/register/TrainerCard';
-import { MOCK_TRAINER } from '@/components/register/constants';
+import { useRegister } from '@/components/register/RegisterContext';
 
 /** Step 5 — confirmation that the account was created and linked to a trainer. */
 export default function Success() {
   const router = useRouter();
+  const { trainer } = useRegister();
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -23,12 +24,14 @@ export default function Success() {
           Quedaste vinculado con tu entrenador. Ya puedes ver tus rutinas y
           comenzar a registrar tu progreso.
         </Text>
-        <TrainerCard
-          name={MOCK_TRAINER.name}
-          role="Tu entrenador asignado"
-          badge="✓ Activo"
-          style={styles.trainer}
-        />
+        {trainer ? (
+          <TrainerCard
+            name={trainer.name}
+            role="Tu entrenador asignado"
+            badge="✓ Activo"
+            style={styles.trainer}
+          />
+        ) : null}
       </View>
 
       <Button

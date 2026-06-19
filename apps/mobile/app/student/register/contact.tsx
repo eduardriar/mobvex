@@ -3,13 +3,13 @@ import { useRouter } from 'expo-router';
 import { Badge, Button, Input, Screen, Text, spacing } from '@mobvex/ui';
 import { StepHeader } from '@/components/register/StepHeader';
 import { TrainerCard } from '@/components/register/TrainerCard';
-import { MOCK_TRAINER } from '@/components/register/constants';
+import { TRAINER_ROLE_LABEL } from '@/components/register/constants';
 import { useRegister } from '@/components/register/RegisterContext';
 
 /** Step 1 — capture the student's email or phone. */
 export default function Contact() {
   const router = useRouter();
-  const { contact, update } = useRegister();
+  const { contact, update, trainer, inviteState } = useRegister();
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -32,12 +32,25 @@ export default function Contact() {
           value={contact}
           onChangeText={(t) => update({ contact: t })}
         />
-        <Badge
-          label={`Invitación de ${MOCK_TRAINER.name}`}
-          variant="alert"
-          style={styles.invite}
-        />
-        <TrainerCard name={MOCK_TRAINER.name} role={MOCK_TRAINER.role} />
+        {trainer ? (
+          <>
+            <Badge
+              label={`Invitación de ${trainer.name}`}
+              variant="alert"
+              style={styles.invite}
+            />
+            <TrainerCard name={trainer.name} role={TRAINER_ROLE_LABEL} />
+          </>
+        ) : inviteState === 'loading' ? (
+          <Text variant="subtitle" style={styles.invite}>
+            Verificando tu invitación…
+          </Text>
+        ) : (
+          <Text variant="hint" style={styles.invite}>
+            No encontramos una invitación válida. Pídele a tu entrenador el
+            enlace de invitación.
+          </Text>
+        )}
       </View>
 
       <View style={styles.spacer} />

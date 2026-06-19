@@ -1,10 +1,19 @@
+import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Divider, Screen, Text, colors, spacing } from '@mobvex/ui';
+import { useRegister } from '@/components/register/RegisterContext';
 
 /** Step 0 — welcome / invitation landing. */
 export default function Welcome() {
   const router = useRouter();
+  // The invite arrives via deep link, e.g. mobvex://student/register?invite=<token>.
+  const { invite } = useLocalSearchParams<{ invite?: string }>();
+  const { resolveInvite } = useRegister();
+
+  useEffect(() => {
+    if (invite) resolveInvite(invite);
+  }, [invite, resolveInvite]);
 
   return (
     <Screen contentStyle={styles.screen}>
