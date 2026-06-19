@@ -1,5 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 
+import { sessionStorage } from './storage';
+
 /**
  * The single Supabase client for the whole monorepo. Import `supabase` from here
  * — never call `createClient` anywhere else.
@@ -25,7 +27,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     // No URL-based session detection in React Native.
     detectSessionInUrl: false,
-    // In the mobile app, pass AsyncStorage as `storage` from the app layer so
-    // sessions survive app restarts. Web/Node fall back to the default storage.
+    // Platform-resolved storage: AsyncStorage on React Native (storage.native.ts),
+    // `undefined` on web/Node so supabase-js uses its built-in storage.
+    storage: sessionStorage,
   },
 });
