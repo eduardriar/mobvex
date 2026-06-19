@@ -32,8 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<User | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [studentLoading, setStudentLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   // Track the auth session. The callback stays synchronous on purpose — running
   // other Supabase calls inside it can deadlock the auth lock, so the profile
@@ -54,82 +53,70 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Load the profile row whenever the authenticated user changes.
+  // Resolve the profile row and (for students) the student record whenever the
+  // authenticated user changes. A signed-in user with no profile yet — e.g.
+  // mid-registration, right after OTP verification — is a valid, fully-resolved
+  // state (profile/student null), not perpetual loading.
   const userId = session?.user?.id ?? null;
   useEffect(() => {
+    if (!authReady) return;
     if (!userId) {
       setProfile(null);
-      setProfileLoading(false);
+      setStudent(null);
+      setDataLoading(false);
       return;
     }
 
     let active = true;
-    setProfileLoading(true);
-    getUserById(userId).then(({ data, error }) => {
+    setDataLoading(true);
+    (async () => {
+      const { data: profileRow, error: profileError } = await getUserById(userId);
       if (!active) return;
-      if (error) {
-        console.warn('AuthProvider: failed to load user profile', error.message);
+      if (profileError) {
+        // PGRST116 ("no rows") simply means the user hasn't been onboarded yet.
+        if (profileError.code !== 'PGRST116') {
+          console.warn('AuthProvider: failed to load user profile', profileError.message);
+        }
         setProfile(null);
-      } else {
-        setProfile(data);
+        setStudent(null);
+        setDataLoading(false);
+        return;
       }
-      setProfileLoading(false);
-    });
 
-    return () => {
-      active = false;
-    };
-  }, [userId]);
+      setProfile(profileRow);
+      if (profileRow?.role !== 'student') {
+        setStudent(null);
+        setDataLoading(false);
+        return;
+      }
 
-  // Load the student record once the role is known. Keeps `studentLoading` true
-  // while the role is still resolving so guards don't act on a half-loaded state.
-  const role = profile?.role ?? null;
-  useEffect(() => {
-    if (!userId) {
-      setStudent(null);
-      setStudentLoading(false);
-      return;
-    }
-    if (role === null) {
-      // Profile (and therefore role) not resolved yet — keep waiting.
-      setStudentLoading(true);
-      return;
-    }
-    if (role !== 'student') {
-      setStudent(null);
-      setStudentLoading(false);
-      return;
-    }
-
-    let active = true;
-    setStudentLoading(true);
-    getStudentByUserId(userId).then(({ data, error }) => {
+      const { data: studentRow, error: studentError } = await getStudentByUserId(userId);
       if (!active) return;
-      if (error) {
-        console.warn('AuthProvider: failed to load student record', error.message);
+      if (studentError) {
+        console.warn('AuthProvider: failed to load student record', studentError.message);
         setStudent(null);
       } else {
-        setStudent(data);
+        setStudent(studentRow);
       }
-      setStudentLoading(false);
-    });
+      setDataLoading(false);
+    })();
 
     return () => {
       active = false;
     };
-  }, [userId, role]);
+  }, [authReady, userId]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
       user: session?.user ?? null,
       profile,
-      role,
+      role: profile?.role ?? null,
       student,
       studentId: student?.id ?? null,
-      loading: !authReady || profileLoading || studentLoading,
+      loading: !authReady || dataLoading,
     }),
-    [session, profile, role, student, authReady, profileLoading, studentLoading],
+    [session, profile, student, authReady, dataLoading],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

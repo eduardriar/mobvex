@@ -51,7 +51,7 @@ function RootNavigator() {
 function useProtectedRoute() {
   const segments = useSegments();
   const router = useRouter();
-  const { session, loading } = useAuth();
+  const { session, studentId, loading } = useAuth();
 
   useEffect(() => {
     if (loading) return;
@@ -60,8 +60,11 @@ function useProtectedRoute() {
 
     if (!session && !inRegister) {
       router.replace('/student/register');
-    } else if (session && inRegister) {
+    } else if (session && studentId && inRegister) {
+      // Only push fully-onboarded students out of the flow. A signed-in user
+      // still without a student record is mid-registration (e.g. just after OTP)
+      // and must stay to finish onboarding.
       router.replace('/');
     }
-  }, [loading, session, segments, router]);
+  }, [loading, session, studentId, segments, router]);
 }
