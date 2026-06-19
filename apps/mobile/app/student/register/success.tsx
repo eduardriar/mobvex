@@ -1,13 +1,25 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Button, Screen, Text, colors, overlays, spacing } from '@mobvex/ui';
 import { TrainerCard } from '@/components/register/TrainerCard';
 import { useRegister } from '@/components/register/RegisterContext';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 /** Step 5 — confirmation that the account was created and linked to a trainer. */
 export default function Success() {
   const router = useRouter();
   const { trainer } = useRegister();
+  const { refresh } = useAuth();
+  const [entering, setEntering] = useState(false);
+
+  // The records were created on the previous step; refresh so the resolved
+  // student id is in context before landing on the dashboard.
+  const goToDashboard = async () => {
+    setEntering(true);
+    await refresh();
+    router.replace('/student');
+  };
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -37,7 +49,8 @@ export default function Success() {
       <Button
         label="IR AL DASHBOARD"
         fullWidth
-        onPress={() => router.replace('/student')}
+        loading={entering}
+        onPress={goToDashboard}
       />
     </Screen>
   );

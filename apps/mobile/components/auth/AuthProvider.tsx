@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { getStudentByUserId, getUserById, supabase } from '@mobvex/db';
 import type { Role, Session, Student, User } from '@mobvex/db';
 
@@ -23,6 +31,8 @@ type AuthContextValue = {
   studentId: string | null;
   /** True until the initial session, profile and (for students) student row resolve. */
   loading: boolean;
+  /** Re-fetch the profile + student record (e.g. right after onboarding creates them). */
+  refresh: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -53,58 +63,63 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Resolve the profile row and (for students) the student record whenever the
-  // authenticated user changes. A signed-in user with no profile yet — e.g.
+  // Resolve the profile row and (for students) the student record for the
+  // authenticated user. A signed-in user with no profile yet — e.g.
   // mid-registration, right after OTP verification — is a valid, fully-resolved
-  // state (profile/student null), not perpetual loading.
+  // state (profile/student null), not perpetual loading. The `loadSeq` ref makes
+  // the latest load win when several overlap (user change + manual refresh).
   const userId = session?.user?.id ?? null;
-  useEffect(() => {
-    if (!authReady) return;
+  const loadSeq = useRef(0);
+
+  const loadUserData = useCallback(async () => {
+    const seq = (loadSeq.current += 1);
+    const isStale = () => seq !== loadSeq.current;
+
     if (!userId) {
+      if (!isStale()) {
+        setProfile(null);
+        setStudent(null);
+        setDataLoading(false);
+      }
+      return;
+    }
+
+    setDataLoading(true);
+    const { data: profileRow, error: profileError } = await getUserById(userId);
+    if (isStale()) return;
+    if (profileError) {
+      // PGRST116 ("no rows") simply means the user hasn't been onboarded yet.
+      if (profileError.code !== 'PGRST116') {
+        console.warn('AuthProvider: failed to load user profile', profileError.message);
+      }
       setProfile(null);
       setStudent(null);
       setDataLoading(false);
       return;
     }
 
-    let active = true;
-    setDataLoading(true);
-    (async () => {
-      const { data: profileRow, error: profileError } = await getUserById(userId);
-      if (!active) return;
-      if (profileError) {
-        // PGRST116 ("no rows") simply means the user hasn't been onboarded yet.
-        if (profileError.code !== 'PGRST116') {
-          console.warn('AuthProvider: failed to load user profile', profileError.message);
-        }
-        setProfile(null);
-        setStudent(null);
-        setDataLoading(false);
-        return;
-      }
-
-      setProfile(profileRow);
-      if (profileRow?.role !== 'student') {
-        setStudent(null);
-        setDataLoading(false);
-        return;
-      }
-
-      const { data: studentRow, error: studentError } = await getStudentByUserId(userId);
-      if (!active) return;
-      if (studentError) {
-        console.warn('AuthProvider: failed to load student record', studentError.message);
-        setStudent(null);
-      } else {
-        setStudent(studentRow);
-      }
+    setProfile(profileRow);
+    if (profileRow?.role !== 'student') {
+      setStudent(null);
       setDataLoading(false);
-    })();
+      return;
+    }
 
-    return () => {
-      active = false;
-    };
-  }, [authReady, userId]);
+    const { data: studentRow, error: studentError } = await getStudentByUserId(userId);
+    if (isStale()) return;
+    if (studentError) {
+      console.warn('AuthProvider: failed to load student record', studentError.message);
+      setStudent(null);
+    } else {
+      setStudent(studentRow);
+    }
+    setDataLoading(false);
+  }, [userId]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    void loadUserData();
+  }, [authReady, loadUserData]);
 
   const value = useMemo<AuthContextValue>(
     () => ({
@@ -115,8 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       student,
       studentId: student?.id ?? null,
       loading: !authReady || dataLoading,
+      refresh: loadUserData,
     }),
-    [session, profile, student, authReady, dataLoading],
+    [session, profile, student, authReady, dataLoading, loadUserData],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

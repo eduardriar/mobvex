@@ -1,14 +1,112 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button, Chip, Input, Screen, Text, colors, spacing } from '@mobvex/ui';
+import { Alert, Button, Chip, Input, Screen, Text, colors, spacing } from '@mobvex/ui';
+import {
+  acceptInvitation,
+  createStudent,
+  getOrCreateUserProfile,
+  getStudentByUserId,
+  saveProgress,
+} from '@mobvex/db';
+import type { Goal as DbGoal } from '@mobvex/db';
 import { StepHeader } from '@/components/register/StepHeader';
-import { GOALS } from '@/components/register/constants';
+import { GOALS, type Goal } from '@/components/register/constants';
 import { useRegister } from '@/components/register/RegisterContext';
+import { useAuth } from '@/components/auth/AuthProvider';
+
+// Interim mapping from the UI's 4 goals to the DB enum's 3. Task #8 reconciles
+// these into one source of truth; until then map to the closest match.
+const GOAL_TO_DB: Record<Goal, DbGoal> = {
+  muscle_gain: 'muscle_gain',
+  fat_loss: 'weight_loss',
+  performance: 'endurance',
+  general_health: 'endurance',
+};
 
 /** Step 4 — minimal profile before the account is created. */
 export default function Profile() {
   const router = useRouter();
-  const { name, weight, height, birthdate, goal, update } = useRegister();
+  // height & birthdate are collected into the draft but have no column in the
+  // current schema, so they are not persisted yet (see task note).
+  const {
+    name,
+    weight,
+    height,
+    birthdate,
+    goal,
+    contact,
+    trainerId,
+    invitationId,
+    update,
+  } = useRegister();
+  const { session } = useAuth();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCreate = async () => {
+    setError(null);
+
+    const userId = session?.user?.id;
+    const email = session?.user?.email ?? contact.trim();
+    if (!userId || !email) {
+      setError('Tu sesión expiró. Vuelve a verificar tu código.');
+      return;
+    }
+    if (!trainerId) {
+      setError('No encontramos tu invitación. Pídele el enlace a tu entrenador.');
+      return;
+    }
+
+    setSaving(true);
+
+    // 1. Profile row — idempotent, so a retry after a partial failure is safe.
+    const { error: profileError } = await getOrCreateUserProfile({
+      id: userId,
+      email,
+      name: name.trim(),
+      role: 'student',
+    });
+    if (profileError) {
+      setSaving(false);
+      setError('No pudimos crear tu cuenta. Inténtalo de nuevo.');
+      return;
+    }
+
+    // 2. Student record linking to the trainer (skip if it already exists).
+    const existing = await getStudentByUserId(userId);
+    let studentId = existing.data?.id ?? null;
+    if (!studentId) {
+      const { data: studentRow, error: studentError } = await createStudent({
+        trainer_id: trainerId,
+        user_id: userId,
+        goal: GOAL_TO_DB[goal],
+        active: true,
+      });
+      if (studentError || !studentRow) {
+        setSaving(false);
+        setError('No pudimos vincularte con tu entrenador. Inténtalo de nuevo.');
+        return;
+      }
+      studentId = studentRow.id;
+    }
+
+    // 3. Best-effort extras — don't block onboarding if these fail.
+    if (invitationId) {
+      await acceptInvitation(invitationId);
+    }
+    const initialWeight = Number(weight.replace(',', '.'));
+    if (Number.isFinite(initialWeight) && initialWeight > 0) {
+      await saveProgress({
+        student_id: studentId,
+        date: new Date().toISOString().slice(0, 10),
+        weight_kg: initialWeight,
+      });
+    }
+
+    setSaving(false);
+    router.replace('/student/register/success');
+  };
 
   return (
     <Screen scroll contentStyle={styles.screen}>
@@ -72,13 +170,17 @@ export default function Profile() {
         </View>
       </View>
 
+      {error ? <Alert message={error} style={styles.alert} /> : null}
+
       <View style={styles.spacer} />
 
       <Button
         label="CREAR CUENTA"
         fullWidth
+        loading={saving}
+        disabled={!name.trim()}
         style={styles.cta}
-        onPress={() => router.replace('/student/register/success')}
+        onPress={handleCreate}
       />
       <Text variant="footnote" style={styles.terms}>
         Al continuar aceptas los{' '}
@@ -121,6 +223,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.xs,
+  },
+  alert: {
+    marginTop: spacing.md,
   },
   spacer: {
     minHeight: spacing.lg,
