@@ -95,6 +95,8 @@ export function RegisterProvider({ children }: { children: React.ReactNode }) {
     };
   }, [inviteToken]);
 
+  console.log('>>>>>', invitation)
+
   const value = useMemo<RegisterContextValue>(
     () => ({
       ...data,

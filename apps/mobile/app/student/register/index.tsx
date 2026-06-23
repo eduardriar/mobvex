@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
+import * as Linking from 'expo-linking';
 import { Button, Divider, Screen, Text, colors, spacing } from '@mobvex/ui';
 import { useRegister } from '@/components/register/RegisterContext';
 
@@ -8,12 +9,20 @@ import { useRegister } from '@/components/register/RegisterContext';
 export default function Welcome() {
   const router = useRouter();
   // The invite arrives via deep link, e.g. mobvex://student/register?invite=<token>.
-  const { invite } = useLocalSearchParams<{ invite?: string }>();
+  // We read it from the launch URL rather than router params: the auth redirects
+  // that land the user on this screen re-navigate without the query string, so
+  // `?invite` never reaches `useLocalSearchParams`. The launch URL is immune to that.
+  const url = Linking.useLinkingURL();
   const { resolveInvite } = useRegister();
 
   useEffect(() => {
-    if (invite) resolveInvite(invite);
-  }, [invite, resolveInvite]);
+    const invite = url
+      ? (Linking.parse(url).queryParams?.invite as string | undefined)
+      : undefined;
+    if (invite) {
+      resolveInvite(invite);
+    }
+  }, [url, resolveInvite]);
 
   return (
     <Screen contentStyle={styles.screen}>

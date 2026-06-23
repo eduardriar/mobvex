@@ -14,7 +14,6 @@ import { WeightTrendCard } from '@/components/progress/WeightTrendCard';
 import { PhotoThumbnail } from '@/components/progress/PhotoThumbnail';
 import { MeasurementCard } from '@/components/progress/MeasurementCard';
 import { useProgress } from '@/hooks/useProgress';
-import { useProgressPhotoThumbs } from '@/hooks/useProgressPhotoThumbs';
 import { useAuth } from '@/components/auth/AuthProvider';
 
 // Hue rotation for the photo tiles (newest first).
@@ -41,7 +40,6 @@ export default function Progress() {
   const { studentId } = useAuth();
   const { entries, loading, refreshing, error, refresh, reload } =
     useProgress(studentId);
-  const { thumbs, reload: reloadPhotos } = useProgressPhotoThumbs(studentId);
 
   // Pick up freshly saved measurements / photos when returning to the tab.
   useFocusEffect(

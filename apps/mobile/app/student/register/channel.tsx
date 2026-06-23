@@ -33,6 +33,7 @@ export default function ChannelScreen() {
 
     setSending(true);
     const { error: otpError } = await signUpWithEmailOtp(email);
+    console.log('>>>', otpError)
     setSending(false);
     if (otpError) {
       setError('No pudimos enviar el código. Revisa tu correo e inténtalo de nuevo.');
@@ -44,6 +45,7 @@ export default function ChannelScreen() {
 
   return (
     <Screen contentStyle={styles.screen}>
+      <Text>Holaaaaaa</Text>
       <StepHeader step={1} />
 
       <Text variant="title" style={styles.title}>
