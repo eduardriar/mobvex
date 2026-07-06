@@ -39,6 +39,11 @@ export type Student = {
   created_at: string;
 };
 
+/** A student row joined with the profile of the person behind it. */
+export type StudentWithUser = Student & {
+  user: Pick<User, 'id' | 'name' | 'email' | 'avatar_url'>;
+};
+
 /** A routine assigned to a student. */
 export type Routine = {
   id: string;

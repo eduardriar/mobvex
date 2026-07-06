@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
 import { GoalTag } from "@/components/trainer/GoalTag";
 import { StatusPill } from "@/components/trainer/StatusPill";
-import { STUDENTS } from "@/lib/data";
+import { useStudents } from "@/hooks/useStudents";
 import { cn } from "@/lib/cn";
 import type { Student } from "@/lib/types";
 
@@ -21,9 +21,10 @@ type Props = {
 
 export function RosterScreen({ search, onOpenStudent }: Props) {
   const [filter, setFilter] = useState<Filter>("Todos");
+  const { students, loading, error } = useStudents();
 
   const q = (search || "").trim().toLowerCase();
-  const list = STUDENTS.filter((s) => {
+  const list = students.filter((s) => {
     if (
       q &&
       !s.name.toLowerCase().includes(q) &&
@@ -37,29 +38,48 @@ export function RosterScreen({ search, onOpenStudent }: Props) {
   });
 
   const stats = [
-    { label: "Alumnos activos", value: `${STUDENTS.length}`, icon: "users", danger: false },
+    { label: "Alumnos activos", value: `${students.length}`, icon: "users", danger: false },
     {
       label: "Sesiones hoy",
-      value: `${STUDENTS.filter((s) => s.nextSession.startsWith("Hoy")).length}`,
+      value: `${students.filter((s) => s.nextSession.startsWith("Hoy")).length}`,
       icon: "calendar",
       danger: false,
     },
     {
       label: "Adherencia media",
-      value:
-        Math.round(
-          STUDENTS.reduce((a, s) => a + s.adherence, 0) / STUDENTS.length,
-        ) + "%",
+      value: students.length
+        ? Math.round(
+            students.reduce((a, s) => a + s.adherence, 0) / students.length,
+          ) + "%"
+        : "—",
       icon: "trendingUp",
       danger: false,
     },
     {
       label: "Requieren atención",
-      value: `${STUDENTS.filter((s) => s.status === "attention").length}`,
+      value: `${students.filter((s) => s.status === "attention").length}`,
       icon: "bell",
       danger: true,
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex flex-1 items-center justify-center">
+        <span className="font-display text-[18px] tracking-[3px] text-muted">
+          CARGANDO ALUMNOS...
+        </span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-8">
+        <span className="font-body text-[14px] text-accent-2">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto px-8 pb-12 pt-7">
@@ -129,7 +149,9 @@ export function RosterScreen({ search, onOpenStudent }: Props) {
         ))}
         {list.length === 0 && (
           <div className="p-16 text-center font-body text-muted">
-            No hay alumnos que coincidan.
+            {students.length === 0
+              ? "Aún no tienes alumnos. Crea el primero con “Nuevo alumno”."
+              : "No hay alumnos que coincidan."}
           </div>
         )}
       </div>

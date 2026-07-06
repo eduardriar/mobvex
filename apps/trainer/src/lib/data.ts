@@ -2,6 +2,7 @@
    Trainer, students, their progress, routines, diets; plus the Mobvex
    recipe library used to compose diets. All user-facing copy in Spanish. */
 
+import type { Goal as DbGoal, StudentWithUser } from "@mobvex/db";
 import type {
   DayKey,
   Diet,
@@ -352,6 +353,70 @@ const MONTHS_ES = [
   "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ] as const;
 
+function monthYear(date: Date): string {
+  return `${MONTHS_ES[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/* Freshly-onboarded defaults for fields no real data exists for yet
+   (adherence, sessions, measurements come from future progress data). */
+function buildStudent(
+  id: string,
+  name: string,
+  email: string,
+  goal: GoalKey,
+  since: string,
+): Student {
+  const startWeight = 70;
+  return {
+    id,
+    name,
+    email,
+    goal,
+    since,
+    nextSession: "Sin programar",
+    adherence: 0,
+    streak: 0,
+    status: "ontrack",
+    weight: Array<number>(8).fill(startWeight),
+    startWeight,
+    targetWeight: startWeight,
+    bodyFat: 20,
+    bodyFatStart: 20,
+    metrics: { cintura: 0, pecho: 0, brazo: 0 },
+    week: Array<boolean>(7).fill(false),
+  };
+}
+
+/* The DB Goal enum → the UI's coaching-goal labels (nearest match for
+   values the trainer UI does not emit itself). */
+export const DB_TO_GOAL: Record<DbGoal, GoalKey> = {
+  fat_loss: "Pérdida de grasa",
+  hypertrophy: "Hipertrofia",
+  muscle_gain: "Hipertrofia",
+  force: "Fuerza",
+  performance: "Fuerza",
+  maintenance: "Mantenimiento",
+  general_health: "Mantenimiento",
+};
+
+/* Shapes a DB students row (with joined user profile) for roster display.
+   The joined user can come back null if RLS hides the profile row. */
+export function studentFromDb(row: StudentWithUser): Student {
+  return buildStudent(
+    row.id,
+    row.user?.name ?? "Alumno",
+    row.user?.email ?? "",
+    DB_TO_GOAL[row.goal],
+    monthYear(new Date(row.created_at)),
+  );
+}
+
+/* Replaces the in-memory roster with the DB-backed list so lookups made by
+   other screens (studentById → ficha, routine/diet defaults) keep working. */
+export function hydrateStudents(students: Student[]): void {
+  STUDENTS.splice(0, STUDENTS.length, ...students);
+}
+
 /* Adds a freshly-created student (from the New student form) to the roster
    with sane, freshly-onboarded defaults. Returns the new student's id. */
 export function createStudent({ name, email, goal }: NewStudentPayload): string {
@@ -364,26 +429,9 @@ export function createStudent({ name, email, goal }: NewStudentPayload): string 
   const id = STUDENTS.some((s) => s.id === base)
     ? `${base}-${STUDENTS.length + 1}`
     : base;
-  const now = new Date();
-  const startWeight = 70;
 
-  STUDENTS.push({
-    id,
-    name: name.trim(),
-    email,
-    goal,
-    since: `${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`,
-    nextSession: "Sin programar",
-    adherence: 0,
-    streak: 0,
-    status: "ontrack",
-    weight: Array<number>(8).fill(startWeight),
-    startWeight,
-    targetWeight: startWeight,
-    bodyFat: 20,
-    bodyFatStart: 20,
-    metrics: { cintura: 0, pecho: 0, brazo: 0 },
-    week: Array<boolean>(7).fill(false),
-  });
+  STUDENTS.push(
+    buildStudent(id, name.trim(), email, goal, monthYear(new Date())),
+  );
   return id;
 }

@@ -1,5 +1,5 @@
 import { supabase } from '../client';
-import type { Goal, NewStudent, Student, User } from '../types';
+import type { Goal, NewStudent, Student, StudentWithUser, User } from '../types';
 
 /** Active students belonging to a trainer, newest first. */
 export async function getStudents(trainerId: string) {
@@ -10,6 +10,21 @@ export async function getStudents(trainerId: string) {
     .eq('active', true)
     .order('created_at', { ascending: false })
     .returns<Student[]>();
+}
+
+/**
+ * Active students of a trainer joined with each student's user profile
+ * (name/email/avatar) for roster display. The FK hint disambiguates from
+ * the trainer_id relation to the same users table.
+ */
+export async function getStudentsWithUser(trainerId: string) {
+  return supabase
+    .from('students')
+    .select('*, user:users!students_user_id_fkey(id, name, email, avatar_url)')
+    .eq('trainer_id', trainerId)
+    .eq('active', true)
+    .order('created_at', { ascending: false })
+    .returns<StudentWithUser[]>();
 }
 
 /** A single student by id. */
