@@ -102,6 +102,9 @@ importers:
 
   apps/trainer:
     dependencies:
+      '@mobvex/db':
+        specifier: workspace:*
+        version: link:../../packages/db
       next:
         specifier: ^16.2.0
         version: 16.2.10(babel-plugin-react-compiler@1.0.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)

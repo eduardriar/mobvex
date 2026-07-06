@@ -242,7 +242,6 @@ export type MealWithOptions = Meal & { meal_recipes: MealOption[] };
 /** A nutrition plan with its meals and each meal's options (joined select). */
 export type NutritionPlan = Nutrition & { meals: MealWithOptions[] };
 
-=======
 /** A photo together with its progress entry's date (for date-keyed display). */
 export type ProgressPhotoWithDate = ProgressPhoto & { date: string };
 

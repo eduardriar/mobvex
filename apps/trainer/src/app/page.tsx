@@ -1,7 +1,8 @@
 /* Mobvex Trainer — app router. Auth → Roster → Student → Builders. */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { getSession, logout, subscribeToAuthChanges } from "@mobvex/db";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/Button";
 import { Sidebar } from "@/components/trainer/Sidebar";
@@ -17,21 +18,38 @@ type View = "roster" | "student" | "routine" | "diet";
 
 export default function Page() {
   const [authed, setAuthed] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("roster");
   const [studentId, setStudentId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
   const student = studentById(studentId);
 
+  useEffect(() => {
+    getSession().then(({ data: { session } }) => {
+      setAuthed(!!session);
+      setLoading(false);
+    });
+
+    return subscribeToAuthChanges(async (_event, session) => {
+      setAuthed(!!session);
+    });
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-bg">
+        <span className="font-display text-[20px] tracking-[3px] text-muted">
+          CARGANDO...
+        </span>
+      </div>
+    );
+  }
+
   if (!authed) {
     return (
       <div className="h-screen w-screen bg-bg">
-        <AuthScreen
-          onAuth={() => {
-            setAuthed(true);
-            setView("roster");
-          }}
-        />
+        <AuthScreen onAuth={() => {}} />
       </div>
     );
   }
@@ -41,6 +59,10 @@ export default function Page() {
     setView("student");
   };
 
+  const handleLogout = async () => {
+    await logout();
+  };
+
   return (
     <div className="flex h-screen w-screen bg-bg">
       <Sidebar
@@ -48,7 +70,7 @@ export default function Page() {
         onNav={(n) => {
           if (n === "roster") setView("roster");
         }}
-        onLogout={() => setAuthed(false)}
+        onLogout={handleLogout}
       />
       <main className="flex h-full min-w-0 flex-1 flex-col">
         {view === "roster" && (
