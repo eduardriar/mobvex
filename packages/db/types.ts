@@ -9,7 +9,14 @@
 
 export type Role = 'trainer' | 'student';
 
-export type Goal = 'muscle_gain' | 'fat_loss' | 'performance' | 'general_health';
+export type Goal =
+  | 'muscle_gain'
+  | 'fat_loss'
+  | 'performance'
+  | 'general_health'
+  | 'hypertrophy'
+  | 'force'
+  | 'maintenance';
 
 /** Base user — a trainer or a student. Extends the Supabase Auth user. */
 export type User = {
@@ -28,6 +35,7 @@ export type Student = {
   user_id: string;
   goal: Goal;
   active: boolean;
+  invite_token: string;
   created_at: string;
 };
 

@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+/*
+  Mobvex design tokens ported from the Claude Design system
+  (mobvex-design-system). Layer hierarchy: bg -> surface -> surface-2 -> border.
+  The neon accent is a SIGNAL — action or positive info only. Never on light.
+*/
+@theme {
+  /* Base palette */
+  --color-bg: #0a0a0b;
+  --color-surface: #111114;
+  --color-surface-2: #18181c;
+  --color-border: #2a2a30;
+  --color-text: #f0f0f0;
+  --color-muted: #6b6b78;
+  --color-accent: #c8ff00;
+  --color-accent-2: #ff4d6d;
+  --color-on-accent: #0a0a0b;
+
+  /* Translucent accent overlays */
+  --color-accent-card: rgba(200, 255, 0, 0.08);
+  --color-accent-card-border: rgba(200, 255, 0, 0.3);
+  --color-accent-icon: rgba(200, 255, 0, 0.12);
+  --color-accent-icon-border: rgba(200, 255, 0, 0.3);
+  --color-accent-badge: rgba(200, 255, 0, 0.1);
+  --color-alert: rgba(255, 77, 109, 0.1);
+  --color-alert-border: rgba(255, 77, 109, 0.25);
+
+  /* Type families (wired to next/font CSS variables) */
+  --font-display: var(--font-bebas), "Oswald", sans-serif;
+  --font-body: var(--font-dm-sans), system-ui, sans-serif;
+
+  /* Radius */
+  --radius-input: 14px;
+  --radius-card: 18px;
+  --radius-badge: 8px;
+
+  /* Modal overlay dim */
+  --color-overlay: rgba(5, 5, 6, 0.72);
+
+  /* Ambient effect */
+  --shadow-glow: 0 0 80px rgba(200, 255, 0, 0.06);
+  --shadow-modal: 0 30px 80px rgba(0, 0, 0, 0.5);
+}
+
+/*
+  Category hues — DECORATIVE only (icons, recipe thumbnails, goal tags).
+  Never on CTAs/text/status. Consumed at runtime via inline style vars.
+*/
+:root {
+  --cat-green-solid: #c8ff00;
+  --cat-green-bg: rgba(200, 255, 0, 0.12);
+  --cat-green-border: rgba(200, 255, 0, 0.3);
+
+  --cat-purple-solid: #7850ff;
+  --cat-purple-bg: rgba(120, 80, 255, 0.12);
+  --cat-purple-border: rgba(120, 80, 255, 0.3);
+
+  --cat-orange-solid: #ff8c00;
+  --cat-orange-bg: rgba(255, 140, 0, 0.12);
+  --cat-orange-border: rgba(255, 140, 0, 0.3);
+
+  --cat-blue-solid: #32a0ff;
+  --cat-blue-bg: rgba(50, 160, 255, 0.12);
+  --cat-blue-border: rgba(50, 160, 255, 0.3);
+
+  --cat-pink-solid: #ff4d6d;
+  --cat-pink-bg: rgba(255, 77, 109, 0.12);
+  --cat-pink-border: rgba(255, 77, 109, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+input::placeholder {
+  color: var(--color-muted);
+}
