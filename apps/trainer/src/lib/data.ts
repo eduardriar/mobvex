@@ -9,6 +9,7 @@ import type {
   Hue,
   HueKey,
   MealSlot,
+  NewStudentPayload,
   Recipe,
   Routine,
   Student,
@@ -344,4 +345,45 @@ export function dietFor(id: string): Diet {
 export function studentById(id: string | null): Student | undefined {
   if (!id) return undefined;
   return STUDENTS.find((s) => s.id === id);
+}
+
+const MONTHS_ES = [
+  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+] as const;
+
+/* Adds a freshly-created student (from the New student form) to the roster
+   with sane, freshly-onboarded defaults. Returns the new student's id. */
+export function createStudent({ name, email, goal }: NewStudentPayload): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+  const base = slug || "alumno";
+  const id = STUDENTS.some((s) => s.id === base)
+    ? `${base}-${STUDENTS.length + 1}`
+    : base;
+  const now = new Date();
+  const startWeight = 70;
+
+  STUDENTS.push({
+    id,
+    name: name.trim(),
+    email,
+    goal,
+    since: `${MONTHS_ES[now.getMonth()]} ${now.getFullYear()}`,
+    nextSession: "Sin programar",
+    adherence: 0,
+    streak: 0,
+    status: "ontrack",
+    weight: Array<number>(8).fill(startWeight),
+    startWeight,
+    targetWeight: startWeight,
+    bodyFat: 20,
+    bodyFatStart: 20,
+    metrics: { cintura: 0, pecho: 0, brazo: 0 },
+    week: Array<boolean>(7).fill(false),
+  });
+  return id;
 }

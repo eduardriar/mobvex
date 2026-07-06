@@ -24,6 +24,7 @@ export type Metrics = {
 export type Student = {
   id: string;
   name: string;
+  email?: string;
   goal: GoalKey;
   since: string;
   nextSession: string;
@@ -37,6 +38,12 @@ export type Student = {
   bodyFatStart: number;
   metrics: Metrics;
   week: boolean[];
+};
+
+export type NewStudentPayload = {
+  name: string;
+  email: string;
+  goal: GoalKey;
 };
 
 export type Exercise = {

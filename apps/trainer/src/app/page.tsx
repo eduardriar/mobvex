@@ -8,13 +8,14 @@ import { Button } from "@/components/ui/Button";
 import { Sidebar } from "@/components/trainer/Sidebar";
 import { Topbar } from "@/components/trainer/Topbar";
 import { AuthScreen } from "@/components/screens/AuthScreen";
+import { NewStudentScreen } from "@/components/screens/NewStudentScreen";
 import { RosterScreen } from "@/components/screens/RosterScreen";
 import { StudentScreen } from "@/components/screens/StudentScreen";
 import { RoutineBuilder } from "@/components/screens/RoutineBuilder";
 import { DietBuilder } from "@/components/screens/DietBuilder";
 import { studentById } from "@/lib/data";
 
-type View = "roster" | "student" | "routine" | "diet";
+type View = "roster" | "newStudent" | "student" | "routine" | "diet";
 
 export default function Page() {
   const [authed, setAuthed] = useState(false);
@@ -83,6 +84,7 @@ export default function Page() {
               actions={
                 <Button
                   variant="primary"
+                  onClick={() => setView("newStudent")}
                   leadingIcon={<Icon name="plus" size={18} color="#0A0A0B" />}
                 >
                   Nuevo alumno
@@ -90,6 +92,20 @@ export default function Page() {
               }
             />
             <RosterScreen search={search} onOpenStudent={openStudent} />
+          </>
+        )}
+
+        {view === "newStudent" && (
+          <>
+            <Topbar
+              title="Nuevo alumno"
+              subtitle="Añade a alguien a tu lista"
+              onBack={() => setView("roster")}
+            />
+            <NewStudentScreen
+              onDone={openStudent}
+              onCancel={() => setView("roster")}
+            />
           </>
         )}
 

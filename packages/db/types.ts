@@ -9,7 +9,14 @@
 
 export type Role = 'trainer' | 'student';
 
-export type Goal = 'weight_loss' | 'muscle_gain' | 'endurance';
+export type Goal =
+  | 'muscle_gain'
+  | 'fat_loss'
+  | 'performance'
+  | 'general_health'
+  | 'hypertrophy'
+  | 'force'
+  | 'maintenance';
 
 /** Base user — a trainer or a student. Extends the Supabase Auth user. */
 export type User = {
@@ -28,6 +35,7 @@ export type Student = {
   user_id: string;
   goal: Goal;
   active: boolean;
+  invite_token: string;
   created_at: string;
 };
 
@@ -259,7 +267,7 @@ export type ProgressWithSignedPhotos = Progress & {
  * Insert payloads — the shape callers provide when creating a row. The database
  * fills `id` and `created_at`, so those are omitted here.
  */
-export type NewStudent = Omit<Student, 'id' | 'created_at'>;
+export type NewStudent = Omit<Student, 'id' | 'created_at' | 'invite_token'>;
 export type NewRoutine = Omit<Routine, 'id' | 'created_at'>;
 export type NewExercise = Omit<Exercise, 'id' | 'created_at'>;
 export type NewRoutineExercise = Omit<RoutineExercise, 'id'>;

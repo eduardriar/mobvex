@@ -33,9 +33,13 @@ enum Role {
 }
 
 enum Goal {
-  weight_loss
   muscle_gain
-  endurance
+  fat_loss
+  performance
+  general_health
+  hypertrophy
+  force
+  maintenance
 }
 
 enum SessionStatus {
@@ -73,12 +77,13 @@ model User {
 
 /// A student linked to a trainer.
 model Student {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  trainerId String   @map("trainer_id") @db.Uuid
-  userId    String   @unique @map("user_id") @db.Uuid
-  goal      Goal
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainerId   String   @map("trainer_id") @db.Uuid
+  userId      String   @unique @map("user_id") @db.Uuid
+  goal        Goal
+  active      Boolean  @default(true)
+  inviteToken String   @unique @default(dbgenerated("gen_random_uuid()")) @map("invite_token") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   trainer         User             @relation("TrainerStudents", fields: [trainerId], references: [id], onDelete: Cascade)
   user            User             @relation("StudentUser", fields: [userId], references: [id], onDelete: Cascade)
