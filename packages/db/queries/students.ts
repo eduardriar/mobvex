@@ -21,6 +21,19 @@ export async function getStudentById(id: string) {
     .single<Student>();
 }
 
+/**
+ * The student profile linked to an auth user, or null when none exists (e.g. a
+ * trainer, or a user who has not completed onboarding). Uses `maybeSingle` so a
+ * missing row is not treated as an error.
+ */
+export async function getStudentByUserId(userId: string) {
+  return supabase
+    .from('students')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle<Student>();
+}
+
 /** Link a new student to a trainer. */
 export async function createStudent(student: NewStudent) {
   return supabase

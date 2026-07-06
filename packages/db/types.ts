@@ -161,6 +161,29 @@ export type Progress = {
 
 export type PhotoPose = 'front' | 'left' | 'right' | 'back';
 
+export type InvitationStatus = 'pending' | 'accepted' | 'revoked';
+
+/**
+ * A trainer's invitation for a prospective student. The invite link carries
+ * `token`; completing registration links the new student to `trainer_id` and
+ * marks the invite accepted.
+ */
+export type Invitation = {
+  id: string;
+  trainer_id: string;
+  token: string;
+  email?: string;
+  status: InvitationStatus;
+  expires_at?: string;
+  accepted_at?: string;
+  created_at: string;
+};
+
+/** An invitation joined with a summary of the inviting trainer (for display). */
+export type InvitationWithTrainer = Invitation & {
+  trainer: Pick<User, 'id' | 'name' | 'avatar_url'>;
+};
+
 /**
  * Metadata for one progress photo, attached to a day's Progress entry. The image
  * file lives in the `progress-photos` Storage bucket at `storage_path`.
@@ -267,7 +290,17 @@ export type ProgressWithSignedPhotos = Progress & {
  * Insert payloads — the shape callers provide when creating a row. The database
  * fills `id` and `created_at`, so those are omitted here.
  */
-export type NewStudent = Omit<Student, 'id' | 'created_at' | 'invite_token'>;
+/**
+ * A new user row. Unlike most inserts, `id` is provided by the caller — it must
+ * equal the Supabase Auth user id (`auth.uid()`) so the profile and auth user
+ * stay linked. The database fills `created_at`.
+ */
+export type NewUser = Omit<User, 'created_at'>;
+export type NewStudent = Omit<Student, 'id' | 'created_at'>;
+export type NewInvitation = Omit<
+  Invitation,
+  'id' | 'status' | 'accepted_at' | 'created_at'
+>;
 export type NewRoutine = Omit<Routine, 'id' | 'created_at'>;
 export type NewExercise = Omit<Exercise, 'id' | 'created_at'>;
 export type NewRoutineExercise = Omit<RoutineExercise, 'id'>;

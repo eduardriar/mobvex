@@ -5,19 +5,18 @@ import { ComingSoon } from '@/components/dashboard/ComingSoon';
 import { RoutineSummaryCard } from '@/components/routines/RoutineSummaryCard';
 import { useAssignedRoutines } from '@/hooks/useAssignedRoutines';
 import { useStartSession } from '@/hooks/useStartSession';
-
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 export default function Routines() {
   const router = useRouter();
+  const { studentId } = useAuth();
   const { routines, loading, refreshing, error, refresh } =
-    useAssignedRoutines(TEMP_STUDENT_ID);
+    useAssignedRoutines(studentId);
   const { start, starting } = useStartSession();
 
   const handleStart = async (routineId: string) => {
-    if (starting) return;
-    const sessionId = await start(TEMP_STUDENT_ID, routineId);
+    if (starting || !studentId) return;
+    const sessionId = await start(studentId, routineId);
     if (sessionId) {
       router.push(`/student/workout/${sessionId}`);
     }

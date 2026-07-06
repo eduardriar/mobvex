@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Screen, Text, colors, spacing } from '@mobvex/ui';
 import { ActiveSessionBar } from '@/components/workout/ActiveSessionBar';
 import { useActiveSession } from '@/hooks/useActiveSession';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { TrainerStrip } from '@/components/dashboard/TrainerStrip';
 import { StatCard } from '@/components/dashboard/StatCard';
@@ -24,13 +25,11 @@ import {
   greeting,
 } from '@/components/dashboard/constants';
 
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
-
 /** Student home / dashboard. */
 export default function Dashboard() {
   const router = useRouter();
-  const { session } = useActiveSession(TEMP_STUDENT_ID);
+  const { studentId } = useAuth();
+  const { session } = useActiveSession(studentId);
 
   const completedSets =
     session?.set_logs.filter((log) => log.completed).length ?? 0;

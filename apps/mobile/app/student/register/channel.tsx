@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Button, Screen, Text, colors, radius, spacing } from '@mobvex/ui';
+import { Alert, Button, Screen, Text, colors, radius, spacing } from '@mobvex/ui';
+import { signUpWithEmailOtp } from '@mobvex/db';
 import { StepHeader } from '@/components/register/StepHeader';
 import { ChannelOption } from '@/components/register/ChannelOption';
 import { useRegister } from '@/components/register/RegisterContext';
@@ -8,10 +10,42 @@ import { useRegister } from '@/components/register/RegisterContext';
 /** Step 2 — choose how the verification code is delivered. */
 export default function ChannelScreen() {
   const router = useRouter();
-  const { channel, update } = useRegister();
+  const { contact, channel, update } = useRegister();
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSend = async () => {
+    setError(null);
+
+    // WhatsApp delivery is not wired yet (tracked separately).
+    if (channel === 'whatsapp') {
+      setError(
+        'La verificación por WhatsApp estará disponible pronto. Usa tu correo por ahora.',
+      );
+      return;
+    }
+
+    const email = contact.trim();
+    if (!email) {
+      setError('Vuelve al paso anterior e ingresa tu correo.');
+      return;
+    }
+
+    setSending(true);
+    const { error: otpError } = await signUpWithEmailOtp(email);
+    console.log('>>>', otpError)
+    setSending(false);
+    if (otpError) {
+      setError('No pudimos enviar el código. Revisa tu correo e inténtalo de nuevo.');
+      return;
+    }
+
+    router.push('/student/register/otp');
+  };
 
   return (
     <Screen contentStyle={styles.screen}>
+      <Text>Holaaaaaa</Text>
       <StepHeader step={1} />
 
       <Text variant="title" style={styles.title}>
@@ -43,12 +77,15 @@ export default function ChannelScreen() {
         </Text>
       </View>
 
+      {error ? <Alert message={error} style={styles.alert} /> : null}
+
       <View style={styles.spacer} />
 
       <Button
         label="ENVIAR CÓDIGO"
         fullWidth
-        onPress={() => router.push('/student/register/otp')}
+        loading={sending}
+        onPress={handleSend}
       />
     </Screen>
   );
@@ -77,6 +114,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderRadius: radius.input,
     padding: spacing.md,
+  },
+  alert: {
+    marginTop: spacing.md,
   },
   noteText: {
     lineHeight: 20,

@@ -8,9 +8,7 @@ import { ProgressBar } from '@/components/dashboard/ProgressBar';
 import { SessionExerciseCard } from '@/components/workout/SessionExerciseCard';
 import { WorkoutClock } from '@/components/workout/WorkoutClock';
 import { useActiveSession } from '@/hooks/useActiveSession';
-
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 /** Group set logs by exercise, ordered by exercise position then set number. */
 function groupByExercise(setLogs: SetLogWithExercise[]): SetLogWithExercise[][] {
@@ -29,8 +27,9 @@ function groupByExercise(setLogs: SetLogWithExercise[]): SetLogWithExercise[][] 
 
 export default function WorkoutSession() {
   const router = useRouter();
+  const { studentId } = useAuth();
   const { session, loading, error, logSet, finish } =
-    useActiveSession(TEMP_STUDENT_ID);
+    useActiveSession(studentId);
   const [finishing, setFinishing] = useState(false);
 
   const exercises = useMemo(
