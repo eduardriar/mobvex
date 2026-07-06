@@ -1,15 +1,29 @@
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Badge, Button, Input, Screen, Text, spacing } from '@mobvex/ui';
 import { StepHeader } from '@/components/register/StepHeader';
 import { TrainerCard } from '@/components/register/TrainerCard';
-import { MOCK_TRAINER } from '@/components/register/constants';
+import { TRAINER_ROLE_LABEL } from '@/components/register/constants';
+import { validateContact } from '@/components/register/validation';
 import { useRegister } from '@/components/register/RegisterContext';
 
 /** Step 1 — capture the student's email or phone. */
 export default function Contact() {
   const router = useRouter();
-  const { contact, update } = useRegister();
+  const { contact, update, trainer, inviteState } = useRegister();
+  console.log('>>>> Invite state',inviteState)
+  console.log('>>>> Trainer',trainer)
+  const [error, setError] = useState<string | null>(null);
+
+  const handleContinue = () => {
+    const message = validateContact(contact);
+    if (message) {
+      setError(message);
+      return;
+    }
+    router.push('/student/register/channel');
+  };
 
   return (
     <Screen contentStyle={styles.screen}>
@@ -30,24 +44,36 @@ export default function Contact() {
           autoCorrect={false}
           keyboardType="email-address"
           value={contact}
-          onChangeText={(t) => update({ contact: t })}
+          error={error ?? undefined}
+          onChangeText={(t) => {
+            update({ contact: t });
+            if (error) setError(null);
+          }}
         />
-        <Badge
-          label={`Invitación de ${MOCK_TRAINER.name}`}
-          variant="alert"
-          style={styles.invite}
-        />
-        <TrainerCard name={MOCK_TRAINER.name} role={MOCK_TRAINER.role} />
+        {trainer ? (
+          <>
+            <Badge
+              label={`Invitación de ${trainer.name}`}
+              variant="alert"
+              style={styles.invite}
+            />
+            <TrainerCard name={trainer.name} role={TRAINER_ROLE_LABEL} />
+          </>
+        ) : inviteState === 'loading' ? (
+          <Text variant="subtitle" style={styles.invite}>
+            Verificando tu invitación…
+          </Text>
+        ) : (
+          <Text variant="hint" style={styles.invite}>
+            No encontramos una invitación válida. Pídele a tu entrenador el
+            enlace de invitación.
+          </Text>
+        )}
       </View>
 
       <View style={styles.spacer} />
 
-      <Button
-        label="CONTINUAR"
-        fullWidth
-        disabled={contact.trim().length === 0}
-        onPress={() => router.push('/student/register/channel')}
-      />
+      <Button label="CONTINUAR" fullWidth onPress={handleContinue} />
     </Screen>
   );
 }

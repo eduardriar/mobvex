@@ -2,7 +2,7 @@ import { supabase } from '../client';
 import type { NewProgress, Progress, ProgressWithPhotos } from '../types';
 
 /** A student's progress history (with attached photos), newest entry first. */
-export async function getProgressByStudent(studentId: string) {
+export async function getProgressByStudent(studentId: string | null) {
   return supabase
     .from('progress')
     .select('*, photos:progress_photos(*)')

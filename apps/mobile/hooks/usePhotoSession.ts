@@ -31,7 +31,7 @@ type UsePhotoSession = {
  * a day's already-saved photos, use `useDayPhotos` / `loadDayPhotoUrls`.
  */
 export function usePhotoSession(
-  studentId: string,
+  studentId: string | null,
   date: string,
 ): UsePhotoSession {
   const [poses, setPoses] = useState<Poses>(initialPoses);
@@ -39,6 +39,7 @@ export function usePhotoSession(
 
   const upload = useCallback(
     async (pose: PhotoPose, data: Uint8Array, contentType: string) => {
+      if (!studentId) return;
       setError(null);
       setPoses((prev) => ({
         ...prev,

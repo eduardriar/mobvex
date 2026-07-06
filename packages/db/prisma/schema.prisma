@@ -33,9 +33,10 @@ enum Role {
 }
 
 enum Goal {
-  weight_loss
   muscle_gain
-  endurance
+  fat_loss
+  performance
+  general_health
 }
 
 enum SessionStatus {
@@ -51,6 +52,12 @@ enum PhotoPose {
   back
 }
 
+enum InvitationStatus {
+  pending
+  accepted
+  revoked
+}
+
 /// Base user — a trainer or a student. Extends Supabase Auth (auth.users).
 model User {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -64,9 +71,10 @@ model User {
   studentsAsTrainer  Student[]   @relation("TrainerStudents")
   studentProfile     Student?    @relation("StudentUser")
   routinesAsTrainer  Routine[]   @relation("TrainerRoutines")
-  nutritionAsTrainer Nutrition[] @relation("TrainerNutrition")
-  exercisesAsTrainer Exercise[]  @relation("TrainerExercises")
-  recipesAsTrainer   Recipe[]    @relation("TrainerRecipes")
+  nutritionAsTrainer Nutrition[]  @relation("TrainerNutrition")
+  exercisesAsTrainer Exercise[]   @relation("TrainerExercises")
+  recipesAsTrainer   Recipe[]     @relation("TrainerRecipes")
+  invitationsAsTrainer Invitation[] @relation("TrainerInvitations")
 
   @@map("users")
 }
@@ -354,4 +362,24 @@ model MealRecipe {
   @@index([mealId])
   @@index([recipeId])
   @@map("meal_recipes")
+}
+
+/// A trainer's invitation for a prospective student. The invite link carries
+/// `token`; resolving it shows the inviting trainer, and completing registration
+/// links the new student to that trainer and marks the invite accepted. May be
+/// pre-bound to an `email` and/or given an expiry.
+model Invitation {
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainerId  String           @map("trainer_id") @db.Uuid
+  token      String           @unique
+  email      String?
+  status     InvitationStatus @default(pending)
+  expiresAt  DateTime?        @map("expires_at") @db.Timestamptz(6)
+  acceptedAt DateTime?        @map("accepted_at") @db.Timestamptz(6)
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  trainer User @relation("TrainerInvitations", fields: [trainerId], references: [id], onDelete: Cascade)
+
+  @@index([trainerId])
+  @@map("invitations")
 }

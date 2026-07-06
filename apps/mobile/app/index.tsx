@@ -1,19 +1,28 @@
 import { Redirect } from 'expo-router';
 import { useActiveSession } from '@/hooks/useActiveSession';
+import { useAuth } from '@/components/auth/AuthProvider';
 
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
-
-// Entry point. If the student has a workout in progress, the active routine is
-// the main screen — route straight into it. Otherwise land on the dashboard.
-// The onboarding flow lives at /student/register.
+// Entry point. Routes by auth state: signed-out users go to onboarding; a
+// student with a workout in progress lands straight in it; otherwise the
+// dashboard. The onboarding flow lives at /student/register.
 export default function Index() {
-  const { session, loading } = useActiveSession(TEMP_STUDENT_ID);
+  const { loading, session, role, studentId } = useAuth();
+  const { session: workout, loading: workoutLoading } = useActiveSession(studentId);
 
-  if (loading) return null;
+  if (loading || workoutLoading) return null;
 
-  if (session) {
-    return <Redirect href={`/student/workout/${session.id}`} />;
+  if (!session) {
+    return <Redirect href="/student/register" />;
+  }
+
+  // Only the student app exists today — anyone without a student profile goes
+  // back to onboarding.
+  if (role !== 'student' || !studentId) {
+    return <Redirect href="/student/register" />;
+  }
+
+  if (workout) {
+    return <Redirect href={`/student/workout/${workout.id}`} />;
   }
 
   return <Redirect href="/student" />;

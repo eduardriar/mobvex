@@ -24,7 +24,7 @@ type UseProgress = {
  * display URLs in one batch.
  */
 async function loadProgress(
-  studentId: string,
+  studentId: string | null,
 ): Promise<{ entries: ProgressWithSignedPhotos[]; error: string | null }> {
   const { data, error } = await getProgressByStudent(studentId);
 
@@ -47,7 +47,7 @@ async function loadProgress(
 }
 
 /** A student's progress history (weight, body fat, measurements, photos). */
-export function useProgress(studentId: string): UseProgress {
+export function useProgress(studentId: string | null): UseProgress {
   const [entries, setEntries] = useState<ProgressWithSignedPhotos[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -66,6 +66,11 @@ export function useProgress(studentId: string): UseProgress {
   );
 
   useEffect(() => {
+    if (!studentId) {
+      setEntries([]);
+      setLoading(false);
+      return;
+    }
     let active = true;
     setLoading(true);
 
@@ -81,6 +86,7 @@ export function useProgress(studentId: string): UseProgress {
   }, [studentId, apply]);
 
   const refresh = useCallback(() => {
+    if (!studentId) return;
     setRefreshing(true);
     loadProgress(studentId).then((result) => {
       apply(result);

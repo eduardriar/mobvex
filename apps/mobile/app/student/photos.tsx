@@ -15,9 +15,7 @@ import {
 import type { PhotoPose } from '@mobvex/db';
 import { PhotoCaptureTile } from '@/components/progress/PhotoCaptureTile';
 import { usePhotoSession } from '@/hooks/usePhotoSession';
-
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
+import { useAuth } from '@/components/auth/AuthProvider';
 
 type PoseSpec = { pose: PhotoPose; label: string; hint: string; hue: CategoryHue };
 
@@ -51,8 +49,9 @@ function base64ToBytes(base64: string): Uint8Array {
 
 export default function NewPhotos() {
   const router = useRouter();
+  const { studentId } = useAuth();
   const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const { poses, error, upload, reset } = usePhotoSession(TEMP_STUDENT_ID, today);
+  const { poses, error, upload, reset } = usePhotoSession(studentId, today);
   const [submitting, setSubmitting] = useState(false);
 
   // Enable "Listo" only once every pose has a photo.

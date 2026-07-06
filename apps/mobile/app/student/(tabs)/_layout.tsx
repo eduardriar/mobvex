@@ -17,7 +17,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="progress" />
       <Tabs.Screen name="nutrition" />
       <Tabs.Screen name="tips" />
-      <Tabs.Screen name="nutrition" />
     </Tabs>
   );
 }

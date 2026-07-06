@@ -29,13 +29,18 @@ type UseActiveSession = {
 };
 
 /** Loads and mutates the student's current active workout session. */
-export function useActiveSession(studentId: string): UseActiveSession {
+export function useActiveSession(studentId: string | null): UseActiveSession {
   const [session, setSession] = useState<ActiveSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(
     async (initial: boolean) => {
+      if (!studentId) {
+        setSession(null);
+        if (initial) setLoading(false);
+        return;
+      }
       if (initial) setLoading(true);
       const { data, error: queryError } = await getActiveSession(studentId);
       if (queryError) {
@@ -50,7 +55,13 @@ export function useActiveSession(studentId: string): UseActiveSession {
   );
 
   useEffect(() => {
+    if (!studentId) {
+      setSession(null);
+      setLoading(false);
+      return;
+    }
     let active = true;
+    setLoading(true);
     getActiveSession(studentId).then(({ data, error: queryError }) => {
       if (!active) return;
       if (queryError) setError(queryError.message);
@@ -81,8 +92,10 @@ export function useActiveSession(studentId: string): UseActiveSession {
     const { error: updateError } = await updateSetLog(id, changes);
     if (updateError) {
       setError(updateError.message);
-      const { data } = await getActiveSession(studentId);
-      setSession(data);
+      if (studentId) {
+        const { data } = await getActiveSession(studentId);
+        setSession(data);
+      }
     }
   }, [studentId]);
 
