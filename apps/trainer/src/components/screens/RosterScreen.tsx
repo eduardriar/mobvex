@@ -5,10 +5,12 @@ import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Avatar } from "@/components/ui/Avatar";
 import { Card } from "@/components/ui/Card";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { GoalTag } from "@/components/trainer/GoalTag";
 import { StatusPill } from "@/components/trainer/StatusPill";
 import { useStudents } from "@/hooks/useStudents";
 import { cn } from "@/lib/cn";
+import { COPY } from "@/lib/copy";
 import type { Student } from "@/lib/types";
 
 const FILTERS = ["Todos", "Al día", "Atención", "Sesión hoy"] as const;
@@ -64,13 +66,7 @@ export function RosterScreen({ search, onOpenStudent }: Props) {
   ];
 
   if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center">
-        <span className="font-display text-[18px] tracking-[3px] text-muted">
-          CARGANDO ALUMNOS...
-        </span>
-      </div>
-    );
+    return <LoadingIndicator className="flex-1" label={COPY.roster.loadingStudents} />;
   }
 
   if (error) {

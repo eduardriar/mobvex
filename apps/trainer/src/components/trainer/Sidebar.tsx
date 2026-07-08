@@ -7,7 +7,7 @@ import { TRAINER } from "@/lib/data";
 import { cn } from "@/lib/cn";
 import { Mark } from "./Mark";
 
-type NavKey = "roster" | "agenda" | "templates" | "messages" | "settings";
+type NavKey = "roster" | "exercises" | "diets" | "settings";
 
 type NavItemProps = {
   icon: string;
@@ -64,22 +64,16 @@ export function Sidebar({ nav, onNav, onLogout }: Props) {
           onClick={() => onNav("roster")}
         />
         <NavItem
-          icon="calendar"
-          label="Agenda"
-          active={nav === "agenda"}
-          onClick={() => onNav("agenda")}
+          icon="dumbbell"
+          label="Ejercicios"
+          active={nav === "exercises"}
+          onClick={() => onNav("exercises")}
         />
         <NavItem
-          icon="clipboard"
-          label="Plantillas"
-          active={nav === "templates"}
-          onClick={() => onNav("templates")}
-        />
-        <NavItem
-          icon="message"
-          label="Mensajes"
-          active={nav === "messages"}
-          onClick={() => onNav("messages")}
+          icon="utensils"
+          label="Dietas"
+          active={nav === "diets"}
+          onClick={() => onNav("diets")}
         />
       </nav>
 

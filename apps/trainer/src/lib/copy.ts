@@ -1,0 +1,78 @@
+/* Mobvex Trainer — global user-facing copy (Spanish).
+   Single source for every UI string, grouped by screen. Components never
+   hardcode user-facing text; they read it from here. */
+
+export const COPY = {
+  common: {
+    loading: "Cargando...",
+  },
+  roster: {
+    loadingStudents: "Cargando alumnos...",
+  },
+  exercises: {
+    title: "Ejercicios",
+    subtitle: "Biblioteca de ejercicios disponibles",
+    repositoryCount: (n: number) =>
+      n === 1
+        ? "1 ejercicio en el repositorio"
+        : `${n} ejercicios en el repositorio`,
+    groupCount: (n: number) =>
+      n === 1 ? "1 ejercicio" : `${n} ejercicios`,
+    newExercise: "Nuevo ejercicio",
+    editExercise: "Editar",
+    form: {
+      createTitle: "Crear ejercicio",
+      editTitle: "Editar ejercicio",
+      close: "Cerrar",
+      mediaEmpty: "Añadir foto o video",
+      mediaAdded: "Foto/video añadido",
+      nameLabel: "Nombre del ejercicio",
+      namePlaceholder: "Ej. Press inclinado",
+      muscleLabel: "Grupo muscular",
+      equipmentLabel: "Equipo",
+      cancel: "Cancelar",
+      saveNew: "Guardar ejercicio",
+      saveEdit: "Guardar cambios",
+      delete: "Eliminar ejercicio",
+    },
+  },
+  diets: {
+    title: "Dietas",
+    subtitle: "Biblioteca de recetas Mobvex",
+    repositoryCount: (n: number) =>
+      n === 1
+        ? "1 receta en el repositorio"
+        : `${n} recetas en el repositorio`,
+    groupCount: (n: number) => (n === 1 ? "1 receta" : `${n} recetas`),
+    newRecipe: "Nueva receta",
+    trainerRecipe: "Receta del entrenador",
+    kcalBadge: (n: number) => `${n} kcal`,
+    proteinBadge: (n: number) => `${n}g prot.`,
+    timeBadge: (n: number) => `${n} min`,
+    form: {
+      title: "Nueva receta",
+      close: "Cerrar",
+      mediaEmpty: "Añadir foto",
+      mediaAdded: "Foto añadida",
+      nameLabel: "Nombre de la receta",
+      namePlaceholder: "Ej. Bowl de quinoa y pollo",
+      categoryLabel: "Categoría",
+      ingredientsLabel: "Ingredientes",
+      ingredientPlaceholder: "Ingrediente",
+      qtyPlaceholder: "Cantidad",
+      addIngredient: "Añadir ingrediente",
+      removeIngredient: "Quitar ingrediente",
+      ingredientAmount: (qty: number, unit: string) => `${qty} ${unit}`,
+      macros: {
+        kcal: "Calorías",
+        kcalUnit: "kcal",
+        protein: "Proteína",
+        carbs: "Carbos",
+        fat: "Grasas",
+        gramsUnit: "g",
+      },
+      cancel: "Cancelar",
+      save: "Guardar receta",
+    },
+  },
+} as const;

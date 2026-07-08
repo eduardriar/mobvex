@@ -4,12 +4,20 @@
 
 import type { Goal as DbGoal, StudentWithUser } from "@mobvex/db";
 import type {
+  CatalogExercise,
   DayKey,
   Diet,
+  EquipmentOption,
   GoalKey,
   Hue,
   HueKey,
+  IngredientUnit,
+  Macros,
+  MealCategory,
   MealSlot,
+  MuscleGroup,
+  NewExercisePayload,
+  NewRecipePayload,
   NewStudentPayload,
   Recipe,
   Routine,
@@ -299,25 +307,179 @@ export function routineFor(id: string): Routine {
   return ROUTINE_BY_ID[id] ?? defaultRoutine();
 }
 
-/* ---- Mobvex recipe library (for diet builder) ---- */
+/* ---- Exercise repository (Ejercicios screen) ---- */
+export const MUSCLE_GROUPS: MuscleGroup[] = [
+  "Tren inferior",
+  "Empuje",
+  "Tirón",
+  "Core y cardio",
+];
+
+export const EQUIPMENT_OPTIONS: EquipmentOption[] = [
+  "Peso corporal",
+  "Barra",
+  "Mancuerna",
+  "Máquina",
+  "Polea",
+  "Banda",
+];
+
+export const EXERCISES: CatalogExercise[] = [
+  { id: "e1", name: "Sentadilla", muscle: "Tren inferior", equipment: "Barra" },
+  { id: "e2", name: "Peso muerto", muscle: "Tren inferior", equipment: "Barra" },
+  { id: "e3", name: "Prensa", muscle: "Tren inferior", equipment: "Máquina" },
+  { id: "e4", name: "Zancadas", muscle: "Tren inferior", equipment: "Mancuerna" },
+  { id: "e5", name: "Hip thrust", muscle: "Tren inferior", equipment: "Barra" },
+  { id: "e6", name: "Elevación de gemelo", muscle: "Tren inferior", equipment: "Máquina" },
+  { id: "e7", name: "Press banca", muscle: "Empuje", equipment: "Barra" },
+  { id: "e8", name: "Press militar", muscle: "Empuje", equipment: "Barra" },
+  { id: "e9", name: "Press inclinado", muscle: "Empuje", equipment: "Mancuerna" },
+  { id: "e10", name: "Aperturas", muscle: "Empuje", equipment: "Mancuerna" },
+  { id: "e11", name: "Extensión de tríceps", muscle: "Empuje", equipment: "Polea" },
+  { id: "e12", name: "Fondos asistidos", muscle: "Empuje", equipment: "Máquina" },
+  { id: "e13", name: "Remo con barra", muscle: "Tirón", equipment: "Barra" },
+  { id: "e14", name: "Jalón al pecho", muscle: "Tirón", equipment: "Polea" },
+  { id: "e15", name: "Dominadas", muscle: "Tirón", equipment: "Peso corporal" },
+  { id: "e16", name: "Remo sentado", muscle: "Tirón", equipment: "Polea" },
+  { id: "e17", name: "Curl bíceps", muscle: "Tirón", equipment: "Mancuerna" },
+  { id: "e18", name: "Face pull", muscle: "Tirón", equipment: "Polea" },
+  { id: "e19", name: "Pájaros", muscle: "Tirón", equipment: "Mancuerna" },
+  { id: "e20", name: "Plancha", muscle: "Core y cardio", equipment: "Peso corporal" },
+  { id: "e21", name: "Crunch en polea", muscle: "Core y cardio", equipment: "Polea" },
+  { id: "e22", name: "HIIT cinta", muscle: "Core y cardio", equipment: "Máquina" },
+];
+
+/* Adds a new exercise to the repository. Returns the new exercise's id. */
+export function createExercise(payload: NewExercisePayload): string {
+  const id = `e-${Date.now()}`;
+  EXERCISES.push({
+    id,
+    name: payload.name.trim(),
+    muscle: payload.muscle,
+    equipment: payload.equipment,
+    hasMedia: !!payload.hasMedia,
+  });
+  return id;
+}
+
+/* Updates an existing repository exercise in place. */
+export function updateExercise(id: string, payload: NewExercisePayload): void {
+  const exercise = EXERCISES.find((e) => e.id === id);
+  if (!exercise) return;
+  exercise.name = payload.name.trim();
+  exercise.muscle = payload.muscle;
+  exercise.equipment = payload.equipment;
+  exercise.hasMedia = !!payload.hasMedia;
+}
+
+/* Removes an exercise from the repository. */
+export function deleteExercise(id: string): void {
+  const index = EXERCISES.findIndex((e) => e.id === id);
+  if (index !== -1) EXERCISES.splice(index, 1);
+}
+
+/* ---- Mobvex recipe library (Dietas screen + diet builder) ---- */
+export const MEAL_CATEGORIES: MealCategory[] = [
+  "Desayuno",
+  "Almuerzo",
+  "Cena",
+  "Snacks",
+];
+
 export const RECIPES: Recipe[] = [
-  { id: "r1", name: "Bowl de salmón y miso", cat: "blue", kcal: 540, p: 34, c: 42, f: 24, time: 20, tag: "Alto en proteína" },
-  { id: "r2", name: "Avena proteica y frutos rojos", cat: "pink", kcal: 380, p: 24, c: 52, f: 9, time: 8, tag: "Desayuno" },
-  { id: "r3", name: "Pollo teriyaki con arroz", cat: "orange", kcal: 610, p: 45, c: 60, f: 14, time: 25, tag: "Alto en proteína" },
-  { id: "r4", name: "Ensalada César con pollo", cat: "green", kcal: 420, p: 38, c: 18, f: 22, time: 15, tag: "Bajo en carbos" },
-  { id: "r5", name: "Tofu salteado y verduras", cat: "purple", kcal: 360, p: 22, c: 34, f: 14, time: 18, tag: "Vegetariano" },
-  { id: "r6", name: "Wrap de pavo y aguacate", cat: "green", kcal: 450, p: 32, c: 38, f: 18, time: 10, tag: "Rápido" },
-  { id: "r7", name: "Tortilla de claras y espinaca", cat: "pink", kcal: 290, p: 28, c: 8, f: 16, time: 12, tag: "Desayuno" },
-  { id: "r8", name: "Curry de garbanzos", cat: "orange", kcal: 480, p: 19, c: 64, f: 16, time: 30, tag: "Vegano" },
-  { id: "r9", name: "Yogur griego, nueces y miel", cat: "blue", kcal: 260, p: 18, c: 22, f: 12, time: 4, tag: "Snack" },
-  { id: "r10", name: "Merluza al horno y brócoli", cat: "blue", kcal: 340, p: 36, c: 14, f: 14, time: 22, tag: "Bajo en carbos" },
-  { id: "r11", name: "Batido de plátano y proteína", cat: "purple", kcal: 310, p: 30, c: 38, f: 5, time: 3, tag: "Post-entreno" },
-  { id: "r12", name: "Ternera magra con quinoa", cat: "orange", kcal: 560, p: 42, c: 48, f: 20, time: 28, tag: "Alto en proteína" },
+  { id: "r1", name: "Bowl de salmón y miso", cat: "blue", kcal: 540, p: 34, c: 42, f: 24, time: 20, tag: "Alto en proteína", meal: "Cena" },
+  { id: "r2", name: "Avena proteica y frutos rojos", cat: "pink", kcal: 380, p: 24, c: 52, f: 9, time: 8, tag: "Desayuno", meal: "Desayuno" },
+  { id: "r3", name: "Pollo teriyaki con arroz", cat: "orange", kcal: 610, p: 45, c: 60, f: 14, time: 25, tag: "Alto en proteína", meal: "Almuerzo" },
+  { id: "r4", name: "Ensalada César con pollo", cat: "green", kcal: 420, p: 38, c: 18, f: 22, time: 15, tag: "Bajo en carbos", meal: "Almuerzo" },
+  { id: "r5", name: "Tofu salteado y verduras", cat: "purple", kcal: 360, p: 22, c: 34, f: 14, time: 18, tag: "Vegetariano", meal: "Cena" },
+  { id: "r6", name: "Wrap de pavo y aguacate", cat: "green", kcal: 450, p: 32, c: 38, f: 18, time: 10, tag: "Rápido", meal: "Almuerzo" },
+  { id: "r7", name: "Tortilla de claras y espinaca", cat: "pink", kcal: 290, p: 28, c: 8, f: 16, time: 12, tag: "Desayuno", meal: "Desayuno" },
+  { id: "r8", name: "Curry de garbanzos", cat: "orange", kcal: 480, p: 19, c: 64, f: 16, time: 30, tag: "Vegano", meal: "Cena" },
+  { id: "r9", name: "Yogur griego, nueces y miel", cat: "blue", kcal: 260, p: 18, c: 22, f: 12, time: 4, tag: "Snack", meal: "Snacks" },
+  { id: "r10", name: "Merluza al horno y brócoli", cat: "blue", kcal: 340, p: 36, c: 14, f: 14, time: 22, tag: "Bajo en carbos", meal: "Cena" },
+  { id: "r11", name: "Batido de plátano y proteína", cat: "purple", kcal: 310, p: 30, c: 38, f: 5, time: 3, tag: "Post-entreno", meal: "Snacks" },
+  { id: "r12", name: "Ternera magra con quinoa", cat: "orange", kcal: 560, p: 42, c: 48, f: 20, time: 28, tag: "Alto en proteína", meal: "Cena" },
 ];
 
 export function recipeById(id: string | null): Recipe | undefined {
   if (!id) return undefined;
   return RECIPES.find((r) => r.id === id);
+}
+
+/* Approx macros per 100 g / 100 ml for common ingredients — used to estimate
+   a recipe's totals as the trainer builds the ingredient list. */
+export const INGREDIENT_DB: Record<string, Macros> = {
+  "Pechuga de pollo": { kcal: 165, p: 31, c: 0, f: 3.6 },
+  "Arroz blanco": { kcal: 130, p: 2.7, c: 28, f: 0.3 },
+  "Arroz integral": { kcal: 123, p: 2.6, c: 26, f: 1 },
+  Quinoa: { kcal: 120, p: 4.4, c: 21, f: 1.9 },
+  Huevo: { kcal: 155, p: 13, c: 1.1, f: 11 },
+  Avena: { kcal: 389, p: 17, c: 66, f: 7 },
+  Salmón: { kcal: 208, p: 20, c: 0, f: 13 },
+  Aguacate: { kcal: 160, p: 2, c: 9, f: 15 },
+  Espinaca: { kcal: 23, p: 2.9, c: 3.6, f: 0.4 },
+  "Yogur griego": { kcal: 97, p: 9, c: 3.6, f: 5 },
+  Plátano: { kcal: 89, p: 1.1, c: 23, f: 0.3 },
+  Almendras: { kcal: 579, p: 21, c: 22, f: 50 },
+  Batata: { kcal: 86, p: 1.6, c: 20, f: 0.1 },
+  Brócoli: { kcal: 34, p: 2.8, c: 7, f: 0.4 },
+  Tofu: { kcal: 76, p: 8, c: 1.9, f: 4.8 },
+  "Carne molida": { kcal: 250, p: 26, c: 0, f: 17 },
+  Leche: { kcal: 42, p: 3.4, c: 5, f: 1 },
+  Miel: { kcal: 304, p: 0.3, c: 82, f: 0 },
+  "Aceite de oliva": { kcal: 884, p: 0, c: 0, f: 100 },
+  "Frijoles negros": { kcal: 132, p: 8.9, c: 24, f: 0.5 },
+};
+
+export const INGREDIENT_NAMES = Object.keys(INGREDIENT_DB);
+
+export const INGREDIENT_UNITS: IngredientUnit[] = ["gr", "ml", "cucharada"];
+
+const UNIT_TO_GRAMS: Record<IngredientUnit, number> = {
+  gr: 1,
+  ml: 1,
+  cucharada: 15,
+};
+
+/* Estimated macros for a quantity of one ingredient; zeros when unknown. */
+export function macrosFor(
+  name: string,
+  qty: number,
+  unit: IngredientUnit,
+): Macros {
+  const db = INGREDIENT_DB[name];
+  if (!db || !qty) return { kcal: 0, p: 0, c: 0, f: 0 };
+  const factor = (qty * UNIT_TO_GRAMS[unit]) / 100;
+  return {
+    kcal: db.kcal * factor,
+    p: db.p * factor,
+    c: db.c * factor,
+    f: db.f * factor,
+  };
+}
+
+/* Trainer-made recipes rotate through the category hues for their icon. */
+const RECIPE_CATS: HueKey[] = ["blue", "orange", "green", "purple", "pink"];
+
+/* Adds a new recipe to the library. Returns the new recipe's id. */
+export function createRecipe(payload: NewRecipePayload): string {
+  const id = `r-${Date.now()}`;
+  const t = payload.totals;
+  RECIPES.push({
+    id,
+    name: payload.name.trim(),
+    meal: payload.meal,
+    ingredients: payload.ingredients,
+    cat: RECIPE_CATS[RECIPES.length % RECIPE_CATS.length] ?? "green",
+    kcal: Math.round(t.kcal),
+    p: Math.round(t.p),
+    c: Math.round(t.c),
+    f: Math.round(t.f),
+    time: 0,
+    tag: payload.meal,
+    hasMedia: payload.hasMedia,
+  });
+  return id;
 }
 
 /* ---- Diets: comidas del día compuestas con recetas Mobvex ---- */
