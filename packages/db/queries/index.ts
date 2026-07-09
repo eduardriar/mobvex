@@ -3,6 +3,7 @@ export * from './users';
 export * from './students';
 export * from './invitations';
 export * from './routines';
+export * from './exercises';
 export * from './progress';
 export * from './sessions';
 export * from './photos';

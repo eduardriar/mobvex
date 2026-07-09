@@ -2,7 +2,12 @@
    Trainer, students, their progress, routines, diets; plus the Mobvex
    recipe library used to compose diets. All user-facing copy in Spanish. */
 
-import type { Goal as DbGoal, StudentWithUser } from "@mobvex/db";
+import type {
+  Exercise as DbExercise,
+  Goal as DbGoal,
+  NewExercise,
+  StudentWithUser,
+} from "@mobvex/db";
 import type {
   CatalogExercise,
   DayKey,
@@ -324,58 +329,37 @@ export const EQUIPMENT_OPTIONS: EquipmentOption[] = [
   "Banda",
 ];
 
-export const EXERCISES: CatalogExercise[] = [
-  { id: "e1", name: "Sentadilla", muscle: "Tren inferior", equipment: "Barra" },
-  { id: "e2", name: "Peso muerto", muscle: "Tren inferior", equipment: "Barra" },
-  { id: "e3", name: "Prensa", muscle: "Tren inferior", equipment: "Máquina" },
-  { id: "e4", name: "Zancadas", muscle: "Tren inferior", equipment: "Mancuerna" },
-  { id: "e5", name: "Hip thrust", muscle: "Tren inferior", equipment: "Barra" },
-  { id: "e6", name: "Elevación de gemelo", muscle: "Tren inferior", equipment: "Máquina" },
-  { id: "e7", name: "Press banca", muscle: "Empuje", equipment: "Barra" },
-  { id: "e8", name: "Press militar", muscle: "Empuje", equipment: "Barra" },
-  { id: "e9", name: "Press inclinado", muscle: "Empuje", equipment: "Mancuerna" },
-  { id: "e10", name: "Aperturas", muscle: "Empuje", equipment: "Mancuerna" },
-  { id: "e11", name: "Extensión de tríceps", muscle: "Empuje", equipment: "Polea" },
-  { id: "e12", name: "Fondos asistidos", muscle: "Empuje", equipment: "Máquina" },
-  { id: "e13", name: "Remo con barra", muscle: "Tirón", equipment: "Barra" },
-  { id: "e14", name: "Jalón al pecho", muscle: "Tirón", equipment: "Polea" },
-  { id: "e15", name: "Dominadas", muscle: "Tirón", equipment: "Peso corporal" },
-  { id: "e16", name: "Remo sentado", muscle: "Tirón", equipment: "Polea" },
-  { id: "e17", name: "Curl bíceps", muscle: "Tirón", equipment: "Mancuerna" },
-  { id: "e18", name: "Face pull", muscle: "Tirón", equipment: "Polea" },
-  { id: "e19", name: "Pájaros", muscle: "Tirón", equipment: "Mancuerna" },
-  { id: "e20", name: "Plancha", muscle: "Core y cardio", equipment: "Peso corporal" },
-  { id: "e21", name: "Crunch en polea", muscle: "Core y cardio", equipment: "Polea" },
-  { id: "e22", name: "HIIT cinta", muscle: "Core y cardio", equipment: "Máquina" },
-];
+/* Shapes a DB exercises row for the Ejercicios screen. Rows whose
+   muscle_group/equipment fall outside the app vocabularies (e.g. data
+   predating the Spanish buckets) fall back to a bucket instead of silently
+   vanishing from the grouped UI. `hasMedia` derives from video_url — the
+   form's media toggle is a placeholder and is never persisted. */
+export function exerciseFromDb(row: DbExercise): CatalogExercise {
+  return {
+    id: row.id,
+    name: row.name,
+    muscle: (MUSCLE_GROUPS as string[]).includes(row.muscle_group ?? "")
+      ? (row.muscle_group as MuscleGroup)
+      : "Core y cardio",
+    equipment: (EQUIPMENT_OPTIONS as string[]).includes(row.equipment ?? "")
+      ? (row.equipment as EquipmentOption)
+      : "Peso corporal",
+    hasMedia: !!row.video_url,
+  };
+}
 
-/* Adds a new exercise to the repository. Returns the new exercise's id. */
-export function createExercise(payload: NewExercisePayload): string {
-  const id = `e-${Date.now()}`;
-  EXERCISES.push({
-    id,
+/* Shapes the exercise form payload into a DB insert/update row, owned by the
+   given trainer. */
+export function exercisePayloadToDb(
+  payload: NewExercisePayload,
+  trainerId: string,
+): NewExercise {
+  return {
+    trainer_id: trainerId,
     name: payload.name.trim(),
-    muscle: payload.muscle,
+    muscle_group: payload.muscle,
     equipment: payload.equipment,
-    hasMedia: !!payload.hasMedia,
-  });
-  return id;
-}
-
-/* Updates an existing repository exercise in place. */
-export function updateExercise(id: string, payload: NewExercisePayload): void {
-  const exercise = EXERCISES.find((e) => e.id === id);
-  if (!exercise) return;
-  exercise.name = payload.name.trim();
-  exercise.muscle = payload.muscle;
-  exercise.equipment = payload.equipment;
-  exercise.hasMedia = !!payload.hasMedia;
-}
-
-/* Removes an exercise from the repository. */
-export function deleteExercise(id: string): void {
-  const index = EXERCISES.findIndex((e) => e.id === id);
-  if (index !== -1) EXERCISES.splice(index, 1);
+  };
 }
 
 /* ---- Mobvex recipe library (Dietas screen + diet builder) ---- */

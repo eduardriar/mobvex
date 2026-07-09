@@ -134,6 +134,7 @@ model Exercise {
   trainerId   String?  @map("trainer_id") @db.Uuid
   name        String
   muscleGroup String?  @map("muscle_group")
+  equipment   String?
   videoUrl    String?  @map("video_url")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 

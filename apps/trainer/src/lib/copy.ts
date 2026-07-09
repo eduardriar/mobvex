@@ -5,6 +5,7 @@
 export const COPY = {
   common: {
     loading: "Cargando...",
+    sessionExpired: "Tu sesión ha expirado. Vuelve a iniciar sesión.",
   },
   roster: {
     loadingStudents: "Cargando alumnos...",
@@ -12,6 +13,10 @@ export const COPY = {
   exercises: {
     title: "Ejercicios",
     subtitle: "Biblioteca de ejercicios disponibles",
+    loading: "Cargando ejercicios...",
+    errors: {
+      inUse: "No se puede eliminar: este ejercicio está en uso en una rutina.",
+    },
     repositoryCount: (n: number) =>
       n === 1
         ? "1 ejercicio en el repositorio"

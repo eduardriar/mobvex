@@ -67,6 +67,7 @@ export type Exercise = {
   trainer_id: string | null;
   name: string;
   muscle_group?: string;
+  equipment?: string;
   video_url?: string;
   created_at: string;
 };

@@ -1,5 +1,5 @@
-/* Mobvex Trainer — Ejercicios: repository grouped by muscular group, with
-   create + edit/delete (media placeholder, name, muscular group, equipment). */
+/* Mobvex Trainer — Ejercicios: DB-backed repository grouped by muscular group,
+   with create + edit/delete (media placeholder, name, muscular group, equipment). */
 "use client";
 
 import { useState } from "react";
@@ -7,27 +7,22 @@ import { Icon } from "@/components/Icon";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { Text } from "@/components/ui/Text";
+import { useExercises } from "@/hooks/useExercises";
 import { COPY } from "@/lib/copy";
-import {
-  createExercise,
-  deleteExercise,
-  EXERCISES,
-  MUSCLE_GROUPS,
-  updateExercise,
-} from "@/lib/data";
-import type { CatalogExercise, NewExercisePayload } from "@/lib/types";
+import { MUSCLE_GROUPS } from "@/lib/data";
+import type { NewExercisePayload } from "@/lib/types";
 import { ExerciseForm } from "./exercises-screen/components/ExerciseForm";
 import { ExerciseTile } from "./exercises-screen/components/ExerciseTile";
 
 const T = COPY.exercises;
 
 export function ExercisesScreen() {
-  const [exercises, setExercises] = useState<CatalogExercise[]>(() => [
-    ...EXERCISES,
-  ]);
+  const { exercises, loading, error, create, update, remove } = useExercises();
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const editingExercise = editingId
     ? exercises.find((e) => e.id === editingId)
@@ -38,25 +33,50 @@ export function ExercisesScreen() {
     items: exercises.filter((e) => e.muscle === group),
   }));
 
-  const refresh = () => setExercises([...EXERCISES]);
-
-  const saveNew = (payload: NewExercisePayload) => {
-    createExercise(payload);
-    refresh();
-    setCreating(false);
+  const openCreate = () => {
+    setActionError(null);
+    setCreating(true);
   };
 
-  const saveEdit = (payload: NewExercisePayload) => {
-    if (editingId) updateExercise(editingId, payload);
-    refresh();
-    setEditingId(null);
+  const openEdit = (id: string) => {
+    setActionError(null);
+    setEditingId(id);
   };
 
-  const remove = () => {
-    if (editingId) deleteExercise(editingId);
-    refresh();
-    setEditingId(null);
+  const saveNew = async (payload: NewExercisePayload) => {
+    setActionError(null);
+    const saveError = await create(payload);
+    if (saveError) setActionError(saveError);
+    else setCreating(false);
   };
+
+  const saveEdit = async (payload: NewExercisePayload) => {
+    if (!editingId) return;
+    setActionError(null);
+    const saveError = await update(editingId, payload);
+    if (saveError) setActionError(saveError);
+    else setEditingId(null);
+  };
+
+  const removeCurrent = async () => {
+    if (!editingId) return;
+    setActionError(null);
+    const deleteError = await remove(editingId);
+    if (deleteError) setActionError(deleteError);
+    else setEditingId(null);
+  };
+
+  if (loading) {
+    return <LoadingIndicator className="flex-1" label={T.loading} />;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-8">
+        <span className="font-body text-[14px] text-accent-2">{error}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 overflow-y-auto px-8 pb-12 pt-[26px]">
@@ -67,7 +87,7 @@ export function ExercisesScreen() {
         </span>
         <Button
           variant="primary"
-          onClick={() => setCreating(true)}
+          onClick={openCreate}
           className="whitespace-nowrap"
           leadingIcon={<Icon name="plus" size={18} color="#0A0A0B" />}
         >
@@ -78,6 +98,7 @@ export function ExercisesScreen() {
       {creating && (
         <ExerciseForm
           title={T.form.createTitle}
+          error={actionError}
           onCancel={() => setCreating(false)}
           onSave={saveNew}
         />
@@ -87,9 +108,10 @@ export function ExercisesScreen() {
           key={editingExercise.id}
           title={T.form.editTitle}
           initial={editingExercise}
+          error={actionError}
           onCancel={() => setEditingId(null)}
           onSave={saveEdit}
-          onDelete={remove}
+          onDelete={removeCurrent}
         />
       )}
 
@@ -110,7 +132,7 @@ export function ExercisesScreen() {
                   <ExerciseTile
                     key={ex.id}
                     exercise={ex}
-                    onEdit={() => setEditingId(ex.id)}
+                    onEdit={() => openEdit(ex.id)}
                   />
                 ))}
               </div>

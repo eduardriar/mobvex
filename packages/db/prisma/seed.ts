@@ -24,25 +24,28 @@ const STUDENT_ID = '00000000-0000-0000-0000-000000000003';
 type CatalogExercise = {
   name: string;
   muscleGroup: string;
+  equipment: string;
 };
 
 // Global catalog — what each exercise *is*. Prescription (sets/reps/rest) is
-// applied per routine, not stored here.
+// applied per routine, not stored here. muscleGroup and equipment use the
+// app's Spanish vocabularies (the four muscle buckets and six equipment
+// options the trainer UI groups and filters by).
 const EXERCISE_CATALOG: CatalogExercise[] = [
-  { name: 'Barbell Back Squat', muscleGroup: 'Quadriceps' },
-  { name: 'Barbell Bench Press', muscleGroup: 'Chest' },
-  { name: 'Conventional Deadlift', muscleGroup: 'Back' },
-  { name: 'Overhead Press', muscleGroup: 'Shoulders' },
-  { name: 'Bent-Over Barbell Row', muscleGroup: 'Back' },
-  { name: 'Pull-Up', muscleGroup: 'Back' },
-  { name: 'Romanian Deadlift', muscleGroup: 'Hamstrings' },
-  { name: 'Incline Dumbbell Press', muscleGroup: 'Chest' },
-  { name: 'Seated Cable Row', muscleGroup: 'Back' },
-  { name: 'Leg Press', muscleGroup: 'Quadriceps' },
-  { name: 'Lateral Raise', muscleGroup: 'Shoulders' },
-  { name: 'Barbell Curl', muscleGroup: 'Biceps' },
-  { name: 'Triceps Rope Pushdown', muscleGroup: 'Triceps' },
-  { name: 'Plank', muscleGroup: 'Core' },
+  { name: 'Barbell Back Squat', muscleGroup: 'Tren inferior', equipment: 'Barra' },
+  { name: 'Barbell Bench Press', muscleGroup: 'Empuje', equipment: 'Barra' },
+  { name: 'Conventional Deadlift', muscleGroup: 'Tirón', equipment: 'Barra' },
+  { name: 'Overhead Press', muscleGroup: 'Empuje', equipment: 'Barra' },
+  { name: 'Bent-Over Barbell Row', muscleGroup: 'Tirón', equipment: 'Barra' },
+  { name: 'Pull-Up', muscleGroup: 'Tirón', equipment: 'Peso corporal' },
+  { name: 'Romanian Deadlift', muscleGroup: 'Tren inferior', equipment: 'Barra' },
+  { name: 'Incline Dumbbell Press', muscleGroup: 'Empuje', equipment: 'Mancuerna' },
+  { name: 'Seated Cable Row', muscleGroup: 'Tirón', equipment: 'Polea' },
+  { name: 'Leg Press', muscleGroup: 'Tren inferior', equipment: 'Máquina' },
+  { name: 'Lateral Raise', muscleGroup: 'Empuje', equipment: 'Mancuerna' },
+  { name: 'Barbell Curl', muscleGroup: 'Tirón', equipment: 'Barra' },
+  { name: 'Triceps Rope Pushdown', muscleGroup: 'Empuje', equipment: 'Polea' },
+  { name: 'Plank', muscleGroup: 'Core y cardio', equipment: 'Peso corporal' },
 ];
 
 type SeedPrescription = {
@@ -232,7 +235,7 @@ const SEED_NUTRITION: {
 
 async function main() {
   // 1. Global exercise catalog (trainer_id = null). Upsert by name so re-runs
-  //    update muscle groups without duplicating rows.
+  //    update muscle groups and equipment without duplicating rows.
   for (const exercise of EXERCISE_CATALOG) {
     const existing = await prisma.exercise.findFirst({
       where: { name: exercise.name, trainerId: null },
@@ -240,11 +243,15 @@ async function main() {
     if (existing) {
       await prisma.exercise.update({
         where: { id: existing.id },
-        data: { muscleGroup: exercise.muscleGroup },
+        data: { muscleGroup: exercise.muscleGroup, equipment: exercise.equipment },
       });
     } else {
       await prisma.exercise.create({
-        data: { name: exercise.name, muscleGroup: exercise.muscleGroup },
+        data: {
+          name: exercise.name,
+          muscleGroup: exercise.muscleGroup,
+          equipment: exercise.equipment,
+        },
       });
     }
   }

@@ -24,12 +24,21 @@ const T = COPY.exercises;
 type Props = {
   title: string;
   initial?: CatalogExercise;
+  /** User-facing error from a failed save/delete, shown inside the modal. */
+  error?: string | null;
   onCancel: () => void;
   onSave: (payload: NewExercisePayload) => void;
   onDelete?: () => void;
 };
 
-export function ExerciseForm({ title, initial, onCancel, onSave, onDelete }: Props) {
+export function ExerciseForm({
+  title,
+  initial,
+  error,
+  onCancel,
+  onSave,
+  onDelete,
+}: Props) {
   const [name, setName] = useState(initial?.name ?? "");
   const [muscle, setMuscle] = useState<MuscleGroup>(
     initial?.muscle ?? MUSCLE_GROUPS[0] ?? "Tren inferior",
@@ -105,6 +114,10 @@ export function ExerciseForm({ title, initial, onCancel, onSave, onDelete }: Pro
           </div>
         </div>
       </div>
+
+      {error && (
+        <p className="mt-4 font-body text-[13px] text-accent-2">{error}</p>
+      )}
 
       <div className="mt-[22px] flex items-center justify-between">
         {onDelete ? (
