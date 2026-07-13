@@ -11,8 +11,6 @@ type Props = {
 
 /** One selectable meal option in the picker: radio + name + kcal + items. */
 export function MealOptionCard({ option, selected, onSelect }: Props) {
-  const recipe = option.recipe;
-
   return (
     <Card variant={selected ? 'active' : 'default'} onPress={onSelect}>
       <View style={styles.header}>
@@ -22,16 +20,16 @@ export function MealOptionCard({ option, selected, onSelect }: Props) {
           ) : null}
         </View>
         <Text variant="cardName" style={styles.name}>
-          {recipe.name}
+          {option.recipe.name}
         </Text>
         <Text style={[styles.kcal, selected ? styles.kcalOn : null]}>
-          {recipe.kcal}
+          {option.kcal}
           <Text style={styles.kcalUnit}> kcal</Text>
         </Text>
       </View>
 
       <View style={styles.items}>
-        {recipe.recipe_items.map((item, i) => (
+        {option.meal_recipe_items.map((item, i) => (
           <View key={item.id} style={[styles.itemRow, i > 0 ? styles.itemDivider : null]}>
             <Text variant="cardRole" style={styles.food}>
               {item.food}

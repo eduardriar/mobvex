@@ -44,6 +44,7 @@ export const COPY = {
   diets: {
     title: "Dietas",
     subtitle: "Biblioteca de recetas Mobvex",
+    loading: "Cargando recetas...",
     repositoryCount: (n: number) =>
       n === 1
         ? "1 receta en el repositorio"
@@ -79,5 +80,44 @@ export const COPY = {
       cancel: "Cancelar",
       save: "Guardar receta",
     },
+  },
+  dietBuilder: {
+    loading: "Cargando plan...",
+    defaultPlanName: "Plan nutricional",
+    planNameLabel: "Nombre del plan",
+    kcalPerDay: "kcal / día",
+    proteinMeta: "proteína",
+    saveAssign: "Guardar y asignar",
+    saving: "Guardando...",
+    assignedTo: (name: string) => `Asignada a ${name}`,
+    chooseRecipe: "Elegir receta",
+    addOption: "Añadir opción",
+    defaultOption: "Por defecto",
+    removeRecipe: "Quitar receta",
+    chooseFor: (slot: string) => `Elegir para ${slot.toLowerCase()}`,
+    filterAll: "Todas",
+    minBadge: (n: number) => `${n} min`,
+    kcalUnit: "kcal",
+    proteinShort: (n: number) => `${n}g prot.`,
+    carbsShort: (n: number) => `${n}g carb.`,
+    dailySummary: "Resumen diario",
+    vsGoals: (name: string) => `Frente a los objetivos de ${name}`,
+    calories: "Calorías",
+    protein: "Proteína",
+    carbs: "Carbos",
+    fat: "Grasas",
+    mealsCount: (n: number, total: number) => `${n}/${total} comidas`,
+    proteinPct: (pct: number) => `${pct}% kcal de proteína`,
+  },
+  sidebar: {
+    trainerRole: "Entrenador personal",
+    logout: "Salir",
+  },
+  student: {
+    dietTitle: "Dieta actual",
+    editDiet: "Editar dieta",
+    loadingDiet: "Cargando dieta...",
+    noDiet: "Sin plan de nutrición asignado",
+    optionCount: (n: number) => (n === 1 ? "1 opción" : `${n} opciones`),
   },
 } as const;

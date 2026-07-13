@@ -1,17 +1,24 @@
-/* Mobvex Trainer — mock data.
-   Trainer, students, their progress, routines, diets; plus the Mobvex
-   recipe library used to compose diets. All user-facing copy in Spanish. */
+/* Mobvex Trainer — data layer: DB row ↔ UI shape mappers, app vocabularies
+   and the shared in-memory caches the hooks hydrate after each fetch.
+   Routines and student progress are still mock while their DB wiring lands. */
 
 import type {
   Exercise as DbExercise,
   Goal as DbGoal,
+  MealHue,
+  MealIcon,
   NewExercise,
+  NewRecipe,
+  NewRecipeItemLine,
+  NutritionPlan,
+  RecipeWithItems,
   StudentWithUser,
 } from "@mobvex/db";
 import type {
   CatalogExercise,
   DayKey,
   Diet,
+  DietMeal,
   EquipmentOption,
   GoalKey,
   Hue,
@@ -28,12 +35,6 @@ import type {
   Routine,
   Student,
 } from "./types";
-
-export const TRAINER = {
-  name: "Carlos Vega",
-  role: "Entrenador personal",
-  email: "carlos@mobvex.app",
-} as const;
 
 /* Category hue per goal — DECORATIVE only (goal tags), never on CTAs/status. */
 export const GOAL_HUE: Record<GoalKey, HueKey> = {
@@ -370,20 +371,15 @@ export const MEAL_CATEGORIES: MealCategory[] = [
   "Snacks",
 ];
 
-export const RECIPES: Recipe[] = [
-  { id: "r1", name: "Bowl de salmón y miso", cat: "blue", kcal: 540, p: 34, c: 42, f: 24, time: 20, tag: "Alto en proteína", meal: "Cena" },
-  { id: "r2", name: "Avena proteica y frutos rojos", cat: "pink", kcal: 380, p: 24, c: 52, f: 9, time: 8, tag: "Desayuno", meal: "Desayuno" },
-  { id: "r3", name: "Pollo teriyaki con arroz", cat: "orange", kcal: 610, p: 45, c: 60, f: 14, time: 25, tag: "Alto en proteína", meal: "Almuerzo" },
-  { id: "r4", name: "Ensalada César con pollo", cat: "green", kcal: 420, p: 38, c: 18, f: 22, time: 15, tag: "Bajo en carbos", meal: "Almuerzo" },
-  { id: "r5", name: "Tofu salteado y verduras", cat: "purple", kcal: 360, p: 22, c: 34, f: 14, time: 18, tag: "Vegetariano", meal: "Cena" },
-  { id: "r6", name: "Wrap de pavo y aguacate", cat: "green", kcal: 450, p: 32, c: 38, f: 18, time: 10, tag: "Rápido", meal: "Almuerzo" },
-  { id: "r7", name: "Tortilla de claras y espinaca", cat: "pink", kcal: 290, p: 28, c: 8, f: 16, time: 12, tag: "Desayuno", meal: "Desayuno" },
-  { id: "r8", name: "Curry de garbanzos", cat: "orange", kcal: 480, p: 19, c: 64, f: 16, time: 30, tag: "Vegano", meal: "Cena" },
-  { id: "r9", name: "Yogur griego, nueces y miel", cat: "blue", kcal: 260, p: 18, c: 22, f: 12, time: 4, tag: "Snack", meal: "Snacks" },
-  { id: "r10", name: "Merluza al horno y brócoli", cat: "blue", kcal: 340, p: 36, c: 14, f: 14, time: 22, tag: "Bajo en carbos", meal: "Cena" },
-  { id: "r11", name: "Batido de plátano y proteína", cat: "purple", kcal: 310, p: 30, c: 38, f: 5, time: 3, tag: "Post-entreno", meal: "Snacks" },
-  { id: "r12", name: "Ternera magra con quinoa", cat: "orange", kcal: 560, p: 42, c: 48, f: 20, time: 28, tag: "Alto en proteína", meal: "Cena" },
-];
+/* DB-hydrated recipe library. useRecipes replaces the contents after each
+   fetch so recipeById lookups (diet builder, student diet card) resolve the
+   same recipes within a session. */
+export const RECIPES: Recipe[] = [];
+
+/* Replaces the in-memory library with the DB-backed list. */
+export function hydrateRecipes(recipes: Recipe[]): void {
+  RECIPES.splice(0, RECIPES.length, ...recipes);
+}
 
 export function recipeById(id: string | null): Recipe | undefined {
   if (!id) return undefined;
@@ -417,12 +413,23 @@ export const INGREDIENT_DB: Record<string, Macros> = {
 
 export const INGREDIENT_NAMES = Object.keys(INGREDIENT_DB);
 
-export const INGREDIENT_UNITS: IngredientUnit[] = ["gr", "ml", "cucharada"];
+export const INGREDIENT_UNITS: IngredientUnit[] = [
+  "gr",
+  "ml",
+  "ud",
+  "reb",
+  "cucharada",
+  "libre",
+];
 
+/* Rough gram equivalents for macro estimation; "libre" contributes nothing. */
 const UNIT_TO_GRAMS: Record<IngredientUnit, number> = {
   gr: 1,
   ml: 1,
+  ud: 120,
+  reb: 30,
   cucharada: 15,
+  libre: 0,
 };
 
 /* Estimated macros for a quantity of one ingredient; zeros when unknown. */
@@ -442,51 +449,120 @@ export function macrosFor(
   };
 }
 
-/* Trainer-made recipes rotate through the category hues for their icon. */
-const RECIPE_CATS: HueKey[] = ["blue", "orange", "green", "purple", "pink"];
+/* Category hue per meal — DECORATIVE only (recipe icons), never CTAs/status. */
+const MEAL_CATEGORY_HUE: Record<MealCategory, HueKey> = {
+  Desayuno: "orange",
+  Almuerzo: "green",
+  Cena: "purple",
+  Snacks: "blue",
+};
 
-/* Adds a new recipe to the library. Returns the new recipe's id. */
-export function createRecipe(payload: NewRecipePayload): string {
-  const id = `r-${Date.now()}`;
-  const t = payload.totals;
-  RECIPES.push({
-    id,
-    name: payload.name.trim(),
-    meal: payload.meal,
-    ingredients: payload.ingredients,
-    cat: RECIPE_CATS[RECIPES.length % RECIPE_CATS.length] ?? "green",
-    kcal: Math.round(t.kcal),
-    p: Math.round(t.p),
-    c: Math.round(t.c),
-    f: Math.round(t.f),
-    time: 0,
-    tag: payload.meal,
-    hasMedia: payload.hasMedia,
-  });
-  return id;
+/* Shapes a DB recipes row (with template items) for the Dietas screen and
+   diet builder. Rows whose meal category falls outside the app's buckets
+   land in Snacks instead of vanishing from the grouped UI. */
+export function recipeFromDb(row: RecipeWithItems): Recipe {
+  const meal = (MEAL_CATEGORIES as string[]).includes(row.meal ?? "")
+    ? (row.meal as MealCategory)
+    : "Snacks";
+  return {
+    id: row.id,
+    name: row.name,
+    cat: MEAL_CATEGORY_HUE[meal],
+    kcal: row.kcal,
+    p: row.protein_g ?? 0,
+    c: row.carbs_g ?? 0,
+    f: row.fat_g ?? 0,
+    time: row.prep_minutes ?? 0,
+    tag: meal,
+    meal,
+    hasMedia: false,
+    ingredients: row.recipe_items.map((item) => ({
+      name: item.food,
+      qty: item.qty_value ?? 0,
+      unit: (INGREDIENT_UNITS as string[]).includes(item.unit ?? "")
+        ? (item.unit as IngredientUnit)
+        : "gr",
+    })),
+  };
+}
+
+/* Display string for a recipe item ("200 g", "1 ud", "libre") — the mobile
+   plan view renders it as-is. */
+function formatItemQty(qty: number, unit: IngredientUnit): string {
+  if (unit === "libre") return "libre";
+  return `${qty} ${unit === "gr" ? "g" : unit}`;
+}
+
+/* Shapes the recipe form payload into a DB insert (header + item lines),
+   owned by the given trainer. */
+export function recipePayloadToDb(
+  payload: NewRecipePayload,
+  trainerId: string,
+): { recipe: NewRecipe; items: NewRecipeItemLine[] } {
+  return {
+    recipe: {
+      trainer_id: trainerId,
+      name: payload.name.trim(),
+      meal: payload.meal,
+      kcal: Math.round(payload.totals.kcal),
+      protein_g: Math.round(payload.totals.p),
+      carbs_g: Math.round(payload.totals.c),
+      fat_g: Math.round(payload.totals.f),
+    },
+    items: payload.ingredients.map((ingredient, index) => ({
+      food: ingredient.name,
+      qty: formatItemQty(ingredient.qty, ingredient.unit),
+      qty_value: ingredient.qty,
+      unit: ingredient.unit,
+      order: index,
+    })),
+  };
 }
 
 /* ---- Diets: comidas del día compuestas con recetas Mobvex ---- */
 export const MEAL_SLOTS: MealSlot[] = ["Desayuno", "Comida", "Cena", "Snack"];
 
-const DIET_BY_ID: Record<string, Diet> = {
-  ava: {
-    name: "Déficit moderado",
-    target: { kcal: 1800, p: 130 },
-    meals: { Desayuno: "r2", Comida: "r4", Cena: "r10", Snack: "r9" },
-  },
+/* Presentation defaults for the meals a trainer-built plan creates. */
+export const MEAL_SLOT_META: Record<
+  MealSlot,
+  { time: string; icon: MealIcon; hue: MealHue }
+> = {
+  Desayuno: { time: "07:30", icon: "utensils", hue: "orange" },
+  Comida: { time: "13:30", icon: "utensils", hue: "green" },
+  Cena: { time: "20:30", icon: "utensils", hue: "purple" },
+  Snack: { time: "17:00", icon: "droplet", hue: "pink" },
 };
 
-function defaultDiet(): Diet {
-  return {
-    name: "Plan equilibrado",
-    target: { kcal: 2100, p: 150 },
-    meals: { Desayuno: "r7", Comida: "r3", Cena: "r1", Snack: "r11" },
-  };
-}
+/* Fallback daily targets while a plan (or its targets) doesn't exist yet. */
+export const DEFAULT_DIET_TARGET = { kcal: 2100, p: 150 } as const;
 
-export function dietFor(id: string): Diet {
-  return DIET_BY_ID[id] ?? defaultDiet();
+/* Shapes a DB nutrition plan for the trainer UI: plan meals map onto the four
+   UI slots by position; each slot holds the trainer's recipe options (ordered)
+   and the student's selected one, falling back to the first option. */
+export function dietFromDb(plan: NutritionPlan): Diet {
+  const meals: Record<MealSlot, DietMeal> = {
+    Desayuno: { options: [], selected: null },
+    Comida: { options: [], selected: null },
+    Cena: { options: [], selected: null },
+    Snack: { options: [], selected: null },
+  };
+  plan.meals.forEach((meal, index) => {
+    const slot = MEAL_SLOTS[index];
+    if (!slot) return;
+    const options = meal.meal_recipes.map((option) => option.recipe_id);
+    meals[slot] = {
+      options,
+      selected: meal.selected_recipe_id ?? options[0] ?? null,
+    };
+  });
+  return {
+    name: plan.name,
+    target: {
+      kcal: plan.target_calories ?? DEFAULT_DIET_TARGET.kcal,
+      p: plan.protein_g ?? DEFAULT_DIET_TARGET.p,
+    },
+    meals,
+  };
 }
 
 export function studentById(id: string | null): Student | undefined {

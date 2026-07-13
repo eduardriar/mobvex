@@ -86,7 +86,13 @@ export type Routine = {
 
 export type MealCategory = "Desayuno" | "Almuerzo" | "Cena" | "Snacks";
 
-export type IngredientUnit = "gr" | "ml" | "cucharada";
+export type IngredientUnit =
+  | "gr"
+  | "ml"
+  | "ud"
+  | "reb"
+  | "cucharada"
+  | "libre";
 
 /** One line of a recipe's ingredient list (qty in the given unit). */
 export type RecipeIngredient = {
@@ -125,10 +131,19 @@ export type NewRecipePayload = {
   totals: Macros;
 };
 
+/**
+ * One meal slot of a diet: the recipe options the trainer offers (ordered,
+ * first = default) and the student's current pick.
+ */
+export type DietMeal = {
+  options: string[];
+  selected: string | null;
+};
+
 export type Diet = {
   name: string;
   target: { kcal: number; p: number };
-  meals: Record<MealSlot, string | null>;
+  meals: Record<MealSlot, DietMeal>;
 };
 
 export type Hue = {

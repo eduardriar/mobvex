@@ -300,11 +300,16 @@ model Nutrition {
 /// ownership like Exercise: NULL trainerId is the shared catalog; a set trainerId
 /// is a trainer's private recipe.
 model Recipe {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  trainerId String?  @map("trainer_id") @db.Uuid
-  name      String
-  kcal      Int
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainerId   String?  @map("trainer_id") @db.Uuid
+  name        String
+  kcal        Int
+  meal        String?
+  proteinG    Int?     @map("protein_g")
+  carbsG      Int?     @map("carbs_g")
+  fatG        Int?     @map("fat_g")
+  prepMinutes Int?     @map("prep_minutes")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   trainer         User?        @relation("TrainerRecipes", fields: [trainerId], references: [id], onDelete: Cascade)
   recipeItems     RecipeItem[]
@@ -316,11 +321,16 @@ model Recipe {
 }
 
 /// A food line within a recipe (e.g. "Pechuga de pollo" · "200 g").
+/// `qty` is the human-readable display string (rendered as-is by the mobile
+/// plan view); `qtyValue`/`unit` are the structured form the trainer app
+/// edits with. The display string is derived from the pair on write.
 model RecipeItem {
   id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   recipeId String @map("recipe_id") @db.Uuid
   food     String
   qty      String
+  qtyValue Float? @map("qty_value")
+  unit     String?
   order    Int
 
   recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
@@ -353,20 +363,50 @@ model Meal {
 }
 
 /// Join: the recipe options available for a meal (the trainer's equivalents).
+/// Also carries the per-student portion of the recipe: macros defaulted from
+/// the recipe at attach time and editable per assignment, with the food lines
+/// copied into MealRecipeItem.
 model MealRecipe {
   id       String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   mealId   String @map("meal_id") @db.Uuid
   recipeId String @map("recipe_id") @db.Uuid
   order    Int
 
-  meal   Meal   @relation(fields: [mealId], references: [id], onDelete: Cascade)
-  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  /// Per-assignment macros, defaulted from the recipe at attach time and
+  /// editable per student.
+  kcal     Int
+  proteinG Int? @map("protein_g")
+  carbsG   Int? @map("carbs_g")
+  fatG     Int? @map("fat_g")
+
+  meal            Meal             @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  recipe          Recipe           @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  mealRecipeItems MealRecipeItem[]
 
   @@unique([mealId, recipeId])
   @@unique([mealId, order])
   @@index([mealId])
   @@index([recipeId])
   @@map("meal_recipes")
+}
+
+/// Per-assignment copy of a recipe's food lines: created from recipe_items
+/// when a recipe is attached to a student's meal, then edited per student.
+/// Same qty/qtyValue/unit convention as RecipeItem.
+model MealRecipeItem {
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  mealRecipeId String  @map("meal_recipe_id") @db.Uuid
+  food         String
+  qty          String
+  qtyValue     Float?  @map("qty_value")
+  unit         String?
+  order        Int
+
+  mealRecipe MealRecipe @relation(fields: [mealRecipeId], references: [id], onDelete: Cascade)
+
+  @@unique([mealRecipeId, order])
+  @@index([mealRecipeId])
+  @@map("meal_recipe_items")
 }
 
 /// A trainer's invitation for a prospective student. The invite link carries

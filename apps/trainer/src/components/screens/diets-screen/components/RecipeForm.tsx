@@ -34,11 +34,13 @@ const FIELD_CLASS =
   "font-body text-[13px] text-text outline-none placeholder:text-muted focus:border-accent";
 
 type Props = {
+  /** User-facing error from a failed save, shown inside the modal. */
+  error?: string | null;
   onCancel: () => void;
   onSave: (payload: NewRecipePayload) => void;
 };
 
-export function RecipeForm({ onCancel, onSave }: Props) {
+export function RecipeForm({ error, onCancel, onSave }: Props) {
   const [name, setName] = useState("");
   const [meal, setMeal] = useState<MealCategory>(
     MEAL_CATEGORIES[0] ?? "Desayuno",
@@ -222,6 +224,10 @@ export function RecipeForm({ onCancel, onSave }: Props) {
           />
         </div>
       </div>
+
+      {error && (
+        <p className="mt-4 font-body text-[13px] text-accent-2">{error}</p>
+      )}
 
       <div className="mt-[22px] flex justify-end gap-2.5">
         <Button variant="secondary" onClick={onCancel}>

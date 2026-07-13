@@ -133,6 +133,48 @@ const SEED_PROGRESS: SeedProgress[] = [
   { weeksAgo: 0, weightKg: 81.3, bodyFatPct: 17.2, chestCm: 104.0, armCm: 38.5, waistCm: 82.0, shoulderCm: 124.5, quadsCm: 60.5, calfCm: 39.0, glutesCm: 100.0, targetCalories: 2750, achievedCalories: 2620, notes: 'Buen progreso, fuerza en alza.' },
 ];
 
+// Seed plan meal names → the app's four recipe categories.
+const MEAL_NAME_TO_CATEGORY: Record<string, string> = {
+  Desayuno: 'Desayuno',
+  Almuerzo: 'Almuerzo',
+  Merienda: 'Snacks',
+  Cena: 'Cena',
+};
+
+/**
+ * Structured (qtyValue, unit) parsed from a display qty like "200 g",
+ * "2 reb" or "libre". Throws on unknown formats so new seed items must
+ * either fit the vocabulary or extend this parser.
+ */
+function parseQty(qty: string): { qtyValue: number; unit: string } {
+  if (qty === 'libre') return { qtyValue: 1, unit: 'libre' };
+  if (qty === '1/2 ud') return { qtyValue: 0.5, unit: 'ud' };
+  const [, value = '', rawUnit = ''] =
+    qty.match(/^(\d+(?:\.\d+)?) (g|ml|uds?|reb)$/) ?? [];
+  const unit = { g: 'gr', ml: 'ml', ud: 'ud', uds: 'ud', reb: 'reb' }[rawUnit];
+  if (!unit) throw new Error(`Unparseable seed qty: "${qty}"`);
+  return { qtyValue: parseFloat(value), unit };
+}
+
+/**
+ * A seed item qty scaled by `factor` for a per-student portion. Only weight
+ * and volume lines scale (rounded to the nearest 5); countable units (ud,
+ * reb, libre) pass through unchanged.
+ */
+function scaleQty(
+  qty: string,
+  factor: number,
+): { qty: string; qtyValue: number; unit: string } {
+  const { qtyValue, unit } = parseQty(qty);
+  if (unit !== 'gr' && unit !== 'ml') return { qty, qtyValue, unit };
+  const scaled = Math.round((qtyValue * factor) / 5) * 5;
+  return {
+    qty: `${scaled} ${unit === 'gr' ? 'g' : 'ml'}`,
+    qtyValue: scaled,
+    unit,
+  };
+}
+
 /** A UTC date `weeks` whole weeks before today (time zeroed). */
 function dateWeeksAgo(weeks: number): Date {
   const date = new Date();
@@ -142,7 +184,15 @@ function dateWeeksAgo(weeks: number): Date {
 }
 
 type SeedRecipeItem = { food: string; qty: string };
-type SeedMealOption = { name: string; kcal: number; items: SeedRecipeItem[] };
+type SeedMealOption = {
+  name: string;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  prepMinutes: number;
+  items: SeedRecipeItem[];
+};
 type SeedMeal = {
   name: string;
   time: string;
@@ -165,15 +215,15 @@ const SEED_NUTRITION: {
     {
       name: 'Desayuno', time: '07:30', icon: 'utensils', hue: 'orange',
       options: [
-        { name: 'Avena y claras', kcal: 520, items: [
+        { name: 'Avena y claras', kcal: 520, protein: 38, carbs: 62, fat: 12, prepMinutes: 10, items: [
           { food: 'Avena con leche', qty: '80 g' }, { food: 'Claras de huevo', qty: '6 uds' },
           { food: 'Plátano', qty: '1 ud' }, { food: 'Mantequilla de maní', qty: '15 g' },
         ] },
-        { name: 'Tostadas y aguacate', kcal: 510, items: [
+        { name: 'Tostadas y aguacate', kcal: 510, protein: 22, carbs: 45, fat: 24, prepMinutes: 10, items: [
           { food: 'Pan integral', qty: '2 reb' }, { food: 'Huevo entero', qty: '2 uds' },
           { food: 'Aguacate', qty: '1/2 ud' }, { food: 'Tomate', qty: 'libre' },
         ] },
-        { name: 'Batido proteico', kcal: 500, items: [
+        { name: 'Batido proteico', kcal: 500, protein: 42, carbs: 60, fat: 8, prepMinutes: 5, items: [
           { food: 'Proteína whey', qty: '30 g' }, { food: 'Avena', qty: '60 g' },
           { food: 'Plátano', qty: '1 ud' }, { food: 'Leche desnatada', qty: '300 ml' },
         ] },
@@ -182,15 +232,15 @@ const SEED_NUTRITION: {
     {
       name: 'Almuerzo', time: '13:00', icon: 'utensils', hue: 'green',
       options: [
-        { name: 'Pollo y arroz', kcal: 720, items: [
+        { name: 'Pollo y arroz', kcal: 720, protein: 55, carbs: 70, fat: 18, prepMinutes: 25, items: [
           { food: 'Pechuga de pollo', qty: '200 g' }, { food: 'Arroz integral', qty: '120 g' },
           { food: 'Verduras salteadas', qty: '150 g' }, { food: 'Aceite de oliva', qty: '10 ml' },
         ] },
-        { name: 'Ternera y patata', kcal: 730, items: [
+        { name: 'Ternera y patata', kcal: 730, protein: 48, carbs: 65, fat: 22, prepMinutes: 30, items: [
           { food: 'Ternera magra', qty: '180 g' }, { food: 'Patata cocida', qty: '200 g' },
           { food: 'Ensalada mixta', qty: 'libre' }, { food: 'Aceite de oliva', qty: '10 ml' },
         ] },
-        { name: 'Pescado y quinoa', kcal: 700, items: [
+        { name: 'Pescado y quinoa', kcal: 700, protein: 50, carbs: 60, fat: 20, prepMinutes: 25, items: [
           { food: 'Merluza', qty: '220 g' }, { food: 'Quinoa', qty: '100 g' },
           { food: 'Brócoli', qty: '150 g' }, { food: 'Aceite de oliva', qty: '10 ml' },
         ] },
@@ -199,15 +249,15 @@ const SEED_NUTRITION: {
     {
       name: 'Merienda', time: '17:00', icon: 'droplet', hue: 'blue',
       options: [
-        { name: 'Yogur y frutos', kcal: 320, items: [
+        { name: 'Yogur y frutos', kcal: 320, protein: 22, carbs: 25, fat: 14, prepMinutes: 5, items: [
           { food: 'Yogur griego', qty: '200 g' }, { food: 'Frutos rojos', qty: '80 g' },
           { food: 'Almendras', qty: '20 g' },
         ] },
-        { name: 'Tostada de pavo', kcal: 310, items: [
+        { name: 'Tostada de pavo', kcal: 310, protein: 24, carbs: 22, fat: 12, prepMinutes: 5, items: [
           { food: 'Pan integral', qty: '1 reb' }, { food: 'Pavo', qty: '60 g' },
           { food: 'Queso fresco', qty: '40 g' },
         ] },
-        { name: 'Fruta y requesón', kcal: 300, items: [
+        { name: 'Fruta y requesón', kcal: 300, protein: 20, carbs: 28, fat: 12, prepMinutes: 5, items: [
           { food: 'Manzana', qty: '1 ud' }, { food: 'Requesón', qty: '150 g' },
           { food: 'Nueces', qty: '15 g' },
         ] },
@@ -216,15 +266,15 @@ const SEED_NUTRITION: {
     {
       name: 'Cena', time: '21:00', icon: 'utensils', hue: 'purple',
       options: [
-        { name: 'Salmón y batata', kcal: 640, items: [
+        { name: 'Salmón y batata', kcal: 640, protein: 40, carbs: 40, fat: 28, prepMinutes: 25, items: [
           { food: 'Salmón', qty: '180 g' }, { food: 'Batata', qty: '150 g' },
           { food: 'Ensalada verde', qty: 'libre' },
         ] },
-        { name: 'Tortilla de verduras', kcal: 600, items: [
+        { name: 'Tortilla de verduras', kcal: 600, protein: 32, carbs: 15, fat: 40, prepMinutes: 15, items: [
           { food: 'Huevo entero', qty: '3 uds' }, { food: 'Verduras variadas', qty: '200 g' },
           { food: 'Queso curado', qty: '30 g' },
         ] },
-        { name: 'Pollo y ensalada', kcal: 620, items: [
+        { name: 'Pollo y ensalada', kcal: 620, protein: 52, carbs: 12, fat: 30, prepMinutes: 20, items: [
           { food: 'Pechuga de pollo', qty: '200 g' }, { food: 'Ensalada grande', qty: 'libre' },
           { food: 'Aguacate', qty: '1/2 ud' },
         ] },
@@ -366,20 +416,33 @@ async function main() {
 
   // 7. Nutrition: global recipe catalog + the demo plan with meals/options.
   const recipeIdByName = new Map<string, string>();
-  const uniqueRecipes = new Map<string, SeedMealOption>();
+  const uniqueRecipes = new Map<string, { option: SeedMealOption; mealCategory: string }>();
   for (const meal of SEED_NUTRITION.meals) {
     for (const option of meal.options) {
-      if (!uniqueRecipes.has(option.name)) uniqueRecipes.set(option.name, option);
+      if (!uniqueRecipes.has(option.name)) {
+        uniqueRecipes.set(option.name, {
+          option,
+          mealCategory: MEAL_NAME_TO_CATEGORY[meal.name] ?? meal.name,
+        });
+      }
     }
   }
 
-  for (const [name, option] of uniqueRecipes) {
+  for (const [name, { option, mealCategory }] of uniqueRecipes) {
+    const recipeData = {
+      kcal: option.kcal,
+      meal: mealCategory,
+      proteinG: option.protein,
+      carbsG: option.carbs,
+      fatG: option.fat,
+      prepMinutes: option.prepMinutes,
+    };
     const existing = await prisma.recipe.findFirst({
       where: { name, trainerId: null },
     });
     const recipe = existing
-      ? await prisma.recipe.update({ where: { id: existing.id }, data: { kcal: option.kcal } })
-      : await prisma.recipe.create({ data: { name, kcal: option.kcal } });
+      ? await prisma.recipe.update({ where: { id: existing.id }, data: recipeData })
+      : await prisma.recipe.create({ data: { name, ...recipeData } });
     recipeIdByName.set(name, recipe.id);
 
     await prisma.recipeItem.deleteMany({ where: { recipeId: recipe.id } });
@@ -388,6 +451,7 @@ async function main() {
         recipeId: recipe.id,
         food: item.food,
         qty: item.qty,
+        ...parseQty(item.qty),
         order: index,
       })),
     });
@@ -423,20 +487,43 @@ async function main() {
         selectedRecipeId: firstOption ? recipeIdByName.get(firstOption.name) : null,
       },
     });
-    await prisma.mealRecipe.createMany({
-      data: meal.options.map((option, index) => ({
-        mealId: createdMeal.id,
-        recipeId: recipeIdByName.get(option.name) as string,
-        order: index,
-      })),
-    });
+    // The seeded student bulks (muscle_gain): their assigned portions are the
+    // catalog recipe scaled up ~10%, demonstrating per-student portions.
+    const PORTION_SCALE = 1.1;
+    for (const [index, option] of meal.options.entries()) {
+      const assignment = await prisma.mealRecipe.create({
+        data: {
+          mealId: createdMeal.id,
+          recipeId: recipeIdByName.get(option.name) as string,
+          order: index,
+          kcal: Math.round(option.kcal * PORTION_SCALE),
+          proteinG: Math.round(option.protein * PORTION_SCALE),
+          carbsG: Math.round(option.carbs * PORTION_SCALE),
+          fatG: Math.round(option.fat * PORTION_SCALE),
+        },
+      });
+      await prisma.mealRecipeItem.createMany({
+        data: option.items.map((item, itemIndex) => {
+          const scaled = scaleQty(item.qty, PORTION_SCALE);
+          return {
+            mealRecipeId: assignment.id,
+            food: item.food,
+            qty: scaled.qty,
+            qtyValue: scaled.qtyValue,
+            unit: scaled.unit,
+            order: itemIndex,
+          };
+        }),
+      });
+    }
   }
 
   console.log(
     `Seeded ${EXERCISE_CATALOG.length} catalog exercises, ` +
       `${SEED_ROUTINES.length} routines (${totalPrescriptions} prescriptions), ` +
       `${SEED_PROGRESS.length} progress entries and the "${SEED_NUTRITION.name}" ` +
-      `nutrition plan (${uniqueRecipes.size} recipes, ${SEED_NUTRITION.meals.length} meals) ` +
+      `nutrition plan (${uniqueRecipes.size} recipes, ${SEED_NUTRITION.meals.length} meals, ` +
+      `portions scaled per student) ` +
       `for student ${student.id}.`,
   );
 }

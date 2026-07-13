@@ -225,23 +225,37 @@ export type MealIcon = 'utensils' | 'droplet';
 export type MealHue = 'green' | 'purple' | 'orange' | 'blue' | 'pink';
 
 /**
- * A reusable recipe = a meal option (name + kcal). `trainer_id` is null for the
- * shared catalog and set for a trainer's private recipe.
+ * A reusable recipe = a meal option (name, kcal, macros, category).
+ * `trainer_id` is null for the shared catalog and set for a trainer's
+ * private recipe.
  */
 export type Recipe = {
   id: string;
   trainer_id: string | null;
   name: string;
   kcal: number;
+  /** Meal category, one of the app's four Spanish buckets. */
+  meal?: string;
+  protein_g?: number;
+  carbs_g?: number;
+  fat_g?: number;
+  prep_minutes?: number;
   created_at: string;
 };
 
-/** A food line within a recipe (e.g. "Pechuga de pollo" · "200 g"). */
+/**
+ * A food line within a recipe (e.g. "Pechuga de pollo" · "200 g").
+ * `qty` is the human-readable display string (rendered as-is by the mobile
+ * plan view); `qty_value`/`unit` are the structured pair the trainer app
+ * edits with — the display string is derived from them on write.
+ */
 export type RecipeItem = {
   id: string;
   recipe_id: string;
   food: string;
   qty: string;
+  qty_value?: number;
+  unit?: string;
   order: number;
 };
 
@@ -259,19 +273,43 @@ export type Meal = {
   selected_recipe_id?: string;
 };
 
-/** Join row: a recipe option available for a meal. */
+/**
+ * Join row: a recipe option available for a meal. Carries the per-student
+ * macros — defaulted from the recipe at attach time, editable per assignment.
+ */
 export type MealRecipe = {
   id: string;
   meal_id: string;
   recipe_id: string;
+  order: number;
+  kcal: number;
+  protein_g?: number;
+  carbs_g?: number;
+  fat_g?: number;
+};
+
+/**
+ * A per-assignment copy of a recipe food line, editable per student. Same
+ * qty/qty_value/unit convention as RecipeItem.
+ */
+export type MealRecipeItem = {
+  id: string;
+  meal_recipe_id: string;
+  food: string;
+  qty: string;
+  qty_value?: number;
+  unit?: string;
   order: number;
 };
 
 /** A recipe with its food items (joined select). */
 export type RecipeWithItems = Recipe & { recipe_items: RecipeItem[] };
 
-/** A meal option = the join row plus its recipe and items. */
-export type MealOption = MealRecipe & { recipe: RecipeWithItems };
+/** A meal option = the join row plus its recipe and per-student items. */
+export type MealOption = MealRecipe & {
+  recipe: Recipe;
+  meal_recipe_items: MealRecipeItem[];
+};
 
 /** A meal together with its recipe options (ordered). */
 export type MealWithOptions = Meal & { meal_recipes: MealOption[] };
@@ -322,3 +360,4 @@ export type NewRecipe = Omit<Recipe, 'id' | 'created_at'>;
 export type NewRecipeItem = Omit<RecipeItem, 'id'>;
 export type NewMeal = Omit<Meal, 'id'>;
 export type NewMealRecipe = Omit<MealRecipe, 'id'>;
+export type NewMealRecipeItem = Omit<MealRecipeItem, 'id'>;

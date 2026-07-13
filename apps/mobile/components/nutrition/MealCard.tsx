@@ -26,8 +26,6 @@ type Props = {
 
 /** A meal in the day's plan: icon, name, selected option + items, "Cambiar". */
 export function MealCard({ meal, option, onPress }: Props) {
-  const recipe = option.recipe;
-
   return (
     <Card onPress={onPress}>
       <View style={styles.header}>
@@ -37,17 +35,17 @@ export function MealCard({ meal, option, onPress }: Props) {
             {meal.name}
           </Text>
           <Text variant="cardRole" style={styles.meta}>
-            {meal.time} h · {recipe.name}
+            {meal.time} h · {option.recipe.name}
           </Text>
         </View>
         <Text style={styles.kcal}>
-          {recipe.kcal}
+          {option.kcal}
           <Text style={styles.kcalUnit}> kcal</Text>
         </Text>
       </View>
 
       <View style={styles.items}>
-        {recipe.recipe_items.map((item, i) => (
+        {option.meal_recipe_items.map((item, i) => (
           <View key={item.id} style={[styles.itemRow, i > 0 ? styles.itemDivider : null]}>
             <Text variant="cardRole" style={styles.food}>
               {item.food}
