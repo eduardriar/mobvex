@@ -5,17 +5,28 @@ import { useEffect, useState } from "react";
 import { getSession, logout, subscribeToAuthChanges } from "@mobvex/db";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/Button";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { Sidebar } from "@/components/trainer/Sidebar";
 import { Topbar } from "@/components/trainer/Topbar";
 import { AuthScreen } from "@/components/screens/AuthScreen";
+import { DietsScreen } from "@/components/screens/DietsScreen";
+import { ExercisesScreen } from "@/components/screens/ExercisesScreen";
 import { NewStudentScreen } from "@/components/screens/NewStudentScreen";
 import { RosterScreen } from "@/components/screens/RosterScreen";
 import { StudentScreen } from "@/components/screens/StudentScreen";
 import { RoutineBuilder } from "@/components/screens/RoutineBuilder";
 import { DietBuilder } from "@/components/screens/DietBuilder";
+import { COPY } from "@/lib/copy";
 import { studentById } from "@/lib/data";
 
-type View = "roster" | "newStudent" | "student" | "routine" | "diet";
+type View =
+  | "roster"
+  | "newStudent"
+  | "student"
+  | "routine"
+  | "diet"
+  | "exercises"
+  | "diets";
 
 export default function Page() {
   const [authed, setAuthed] = useState(false);
@@ -38,13 +49,7 @@ export default function Page() {
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-bg">
-        <span className="font-display text-[20px] tracking-[3px] text-muted">
-          CARGANDO...
-        </span>
-      </div>
-    );
+    return <LoadingIndicator className="h-screen w-screen bg-bg" />;
   }
 
   if (!authed) {
@@ -67,9 +72,13 @@ export default function Page() {
   return (
     <div className="flex h-screen w-screen bg-bg">
       <Sidebar
-        nav="roster"
+        nav={
+          view === "exercises" || view === "diets" ? view : "roster"
+        }
         onNav={(n) => {
           if (n === "roster") setView("roster");
+          if (n === "exercises") setView("exercises");
+          if (n === "diets") setView("diets");
         }}
         onLogout={handleLogout}
       />
@@ -106,6 +115,23 @@ export default function Page() {
               onDone={openStudent}
               onCancel={() => setView("roster")}
             />
+          </>
+        )}
+
+        {view === "exercises" && (
+          <>
+            <Topbar
+              title={COPY.exercises.title}
+              subtitle={COPY.exercises.subtitle}
+            />
+            <ExercisesScreen />
+          </>
+        )}
+
+        {view === "diets" && (
+          <>
+            <Topbar title={COPY.diets.title} subtitle={COPY.diets.subtitle} />
+            <DietsScreen />
           </>
         )}
 

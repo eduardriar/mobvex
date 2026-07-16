@@ -46,6 +46,27 @@ export type NewStudentPayload = {
   goal: GoalKey;
 };
 
+export type MuscleGroup = "Tren inferior" | "Empuje" | "Tirón" | "Core y cardio";
+
+export type EquipmentOption =
+  | "Peso corporal"
+  | "Barra"
+  | "Mancuerna"
+  | "Máquina"
+  | "Polea"
+  | "Banda";
+
+/** An exercise in the trainer's repository (Ejercicios screen). */
+export type CatalogExercise = {
+  id: string;
+  name: string;
+  muscle: MuscleGroup;
+  equipment: EquipmentOption;
+  hasMedia?: boolean;
+};
+
+export type NewExercisePayload = Omit<CatalogExercise, "id">;
+
 export type Exercise = {
   name: string;
   sets: number | string;
@@ -63,6 +84,30 @@ export type Routine = {
   days: Record<DayKey, RoutineDay | null>;
 };
 
+export type MealCategory = "Desayuno" | "Almuerzo" | "Cena" | "Snacks";
+
+export type IngredientUnit =
+  | "gr"
+  | "ml"
+  | "ud"
+  | "reb"
+  | "cucharada"
+  | "libre";
+
+/** One line of a recipe's ingredient list (qty in the given unit). */
+export type RecipeIngredient = {
+  name: string;
+  qty: number;
+  unit: IngredientUnit;
+};
+
+export type Macros = {
+  kcal: number;
+  p: number;
+  c: number;
+  f: number;
+};
+
 export type Recipe = {
   id: string;
   name: string;
@@ -73,12 +118,32 @@ export type Recipe = {
   f: number;
   time: number;
   tag: string;
+  meal: MealCategory;
+  hasMedia?: boolean;
+  ingredients?: RecipeIngredient[];
+};
+
+export type NewRecipePayload = {
+  name: string;
+  meal: MealCategory;
+  hasMedia: boolean;
+  ingredients: RecipeIngredient[];
+  totals: Macros;
+};
+
+/**
+ * One meal slot of a diet: the recipe options the trainer offers (ordered,
+ * first = default) and the student's current pick.
+ */
+export type DietMeal = {
+  options: string[];
+  selected: string | null;
 };
 
 export type Diet = {
   name: string;
   target: { kcal: number; p: number };
-  meals: Record<MealSlot, string | null>;
+  meals: Record<MealSlot, DietMeal>;
 };
 
 export type Hue = {

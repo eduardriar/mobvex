@@ -3,11 +3,12 @@
 
 import { Icon } from "@/components/Icon";
 import { Avatar } from "@/components/ui/Avatar";
-import { TRAINER } from "@/lib/data";
+import { useTrainerProfile } from "@/hooks/useTrainerProfile";
 import { cn } from "@/lib/cn";
+import { COPY } from "@/lib/copy";
 import { Mark } from "./Mark";
 
-type NavKey = "roster" | "agenda" | "templates" | "messages" | "settings";
+type NavKey = "roster" | "exercises" | "diets" | "settings";
 
 type NavItemProps = {
   icon: string;
@@ -42,6 +43,8 @@ type Props = {
 };
 
 export function Sidebar({ nav, onNav, onLogout }: Props) {
+  const profile = useTrainerProfile();
+
   return (
     <aside className="flex h-full w-[248px] shrink-0 flex-col border-r border-border bg-surface px-4 py-[22px]">
       <div className="flex items-center gap-3 px-2.5 pb-[22px] pt-1">
@@ -64,22 +67,16 @@ export function Sidebar({ nav, onNav, onLogout }: Props) {
           onClick={() => onNav("roster")}
         />
         <NavItem
-          icon="calendar"
-          label="Agenda"
-          active={nav === "agenda"}
-          onClick={() => onNav("agenda")}
+          icon="dumbbell"
+          label="Ejercicios"
+          active={nav === "exercises"}
+          onClick={() => onNav("exercises")}
         />
         <NavItem
-          icon="clipboard"
-          label="Plantillas"
-          active={nav === "templates"}
-          onClick={() => onNav("templates")}
-        />
-        <NavItem
-          icon="message"
-          label="Mensajes"
-          active={nav === "messages"}
-          onClick={() => onNav("messages")}
+          icon="utensils"
+          label="Dietas"
+          active={nav === "diets"}
+          onClick={() => onNav("diets")}
         />
       </nav>
 
@@ -92,19 +89,19 @@ export function Sidebar({ nav, onNav, onLogout }: Props) {
         />
         <div className="mx-1 my-2.5 h-px bg-border" />
         <div className="flex items-center gap-3 px-2.5 py-1.5">
-          <Avatar name={TRAINER.name} size={40} active />
+          <Avatar name={profile?.name ?? ""} size={40} active />
           <div className="min-w-0 flex-1">
             <div className="truncate font-body text-[13px] font-medium text-text">
-              {TRAINER.name}
+              {profile?.name}
             </div>
             <div className="font-body text-[11px] text-muted">
-              {TRAINER.role}
+              {COPY.sidebar.trainerRole}
             </div>
           </div>
           <button
             type="button"
             onClick={onLogout}
-            title="Salir"
+            title={COPY.sidebar.logout}
             className="flex cursor-pointer p-1.5 text-muted hover:text-text"
           >
             <Icon name="logout" size={18} />

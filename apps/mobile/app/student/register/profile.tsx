@@ -2,13 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Alert, Button, Chip, Input, Screen, Text, colors, spacing } from '@mobvex/ui';
-import {
-  acceptInvitation,
-  createStudent,
-  getOrCreateUserProfile,
-  getStudentByUserId,
-  saveProgress,
-} from '@mobvex/db';
+import { claimStudentInvitation, saveProgress } from '@mobvex/db';
 import { StepHeader } from '@/components/register/StepHeader';
 import { GOALS } from '@/components/register/constants';
 import {
@@ -33,7 +27,6 @@ export default function Profile() {
     height,
     birthdate,
     goal,
-    contact,
     trainerId,
     invitationId,
     update,
@@ -64,53 +57,33 @@ export default function Profile() {
     if (!validate()) return;
 
     const userId = session?.user?.id;
-    const email = session?.user?.email ?? contact.trim();
-    if (!userId || !email) {
+    if (!userId) {
       setError('Tu sesión expiró. Vuelve a verificar tu código.');
       return;
     }
-    if (!trainerId) {
+    if (!trainerId || !invitationId) {
       setError('No encontramos tu invitación. Pídele el enlace a tu entrenador.');
       return;
     }
 
     setSaving(true);
 
-    // 1. Profile row — idempotent, so a retry after a partial failure is safe.
-    const { error: profileError } = await getOrCreateUserProfile({
-      id: userId,
-      email,
+    // Profile + trainer link + invitation acceptance, in one atomic RPC.
+    // Adopts the placeholder the trainer pre-created (users.email is unique,
+    // so creating a second profile client-side would fail or duplicate).
+    // Idempotent — a retry after a partial failure is safe.
+    const { data: studentId, error: claimError } = await claimStudentInvitation({
+      invitationId,
       name: name.trim(),
-      role: 'student',
+      goal,
     });
-    if (profileError) {
+    if (claimError || !studentId) {
       setSaving(false);
-      setError('No pudimos crear tu cuenta. Inténtalo de nuevo.');
+      setError('No pudimos vincularte con tu entrenador. Inténtalo de nuevo.');
       return;
     }
 
-    // 2. Student record linking to the trainer (skip if it already exists).
-    const existing = await getStudentByUserId(userId);
-    let studentId = existing.data?.id ?? null;
-    if (!studentId) {
-      const { data: studentRow, error: studentError } = await createStudent({
-        trainer_id: trainerId,
-        user_id: userId,
-        goal,
-        active: true,
-      });
-      if (studentError || !studentRow) {
-        setSaving(false);
-        setError('No pudimos vincularte con tu entrenador. Inténtalo de nuevo.');
-        return;
-      }
-      studentId = studentRow.id;
-    }
-
-    // 3. Best-effort extras — don't block onboarding if these fail.
-    if (invitationId) {
-      await acceptInvitation(invitationId);
-    }
+    // Best-effort extras — don't block onboarding if these fail.
     const initialWeight = Number(weight.replace(',', '.'));
     if (Number.isFinite(initialWeight) && initialWeight > 0) {
       await saveProgress({

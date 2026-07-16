@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Alert, Button, Screen, Text, colors, radius, spacing } from '@mobvex/ui';
 import { signUpWithEmailOtp } from '@mobvex/db';
+import { Alert, Button, Screen, Text, colors, radius, spacing } from '@mobvex/ui';
+
 import { StepHeader } from '@/components/register/StepHeader';
 import { ChannelOption } from '@/components/register/ChannelOption';
 import { useRegister } from '@/components/register/RegisterContext';

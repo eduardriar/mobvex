@@ -12,17 +12,22 @@ import { GoalTag } from "@/components/trainer/GoalTag";
 import { StatusPill } from "@/components/trainer/StatusPill";
 import { WeekDots } from "@/components/trainer/WeekDots";
 import { WeightChart } from "@/components/trainer/WeightChart";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { useDiet } from "@/hooks/useDiet";
+import { useRecipes } from "@/hooks/useRecipes";
 import {
   DAYS,
   HUE,
   MEAL_SLOTS,
   STUDENTS,
-  dietFor,
   recipeById,
   routineFor,
   studentById,
 } from "@/lib/data";
 import { cn } from "@/lib/cn";
+import { COPY } from "@/lib/copy";
+
+const T = COPY.student;
 
 type Props = {
   studentId: string;
@@ -53,7 +58,11 @@ function SectionLabel({
 export function StudentScreen({ studentId, onEditRoutine, onEditDiet }: Props) {
   const s = studentById(studentId) ?? STUDENTS[0]!;
   const routine = routineFor(s.id);
-  const diet = dietFor(s.id);
+  // useRecipes hydrates the shared library so recipeById resolves the plan's
+  // recipes even when the Dietas screen hasn't been visited this session.
+  const { loading: recipesLoading } = useRecipes();
+  const { diet, loading: dietLoading } = useDiet(s.id);
+  const dietReady = !dietLoading && !recipesLoading;
   const wNow = s.weight[s.weight.length - 1]!;
   const wDelta = wNow - s.startWeight;
   const fatDelta = s.bodyFat - s.bodyFatStart;
@@ -269,58 +278,71 @@ export function StudentScreen({ studentId, onEditRoutine, onEditDiet }: Props) {
                 leadingIcon={<Icon name="edit" size={15} />}
                 onClick={onEditDiet}
               >
-                Editar dieta
+                {T.editDiet}
               </Button>
             }
           >
-            Dieta actual
+            {T.dietTitle}
           </SectionLabel>
           <Card style={{ padding: 20 }}>
-            <div className="mb-4 flex items-center justify-between">
-              <span className="font-body text-[15px] font-medium text-text">
-                {diet.name}
+            {!dietReady ? (
+              <LoadingIndicator label={T.loadingDiet} />
+            ) : !diet ? (
+              <span className="font-body text-[14px] text-muted">
+                {T.noDiet}
               </span>
-              <div className="flex gap-2">
-                <Badge>{diet.target.kcal} kcal</Badge>
-                <Badge>{diet.target.p}g prot.</Badge>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {MEAL_SLOTS.map((slot) => {
-                const r = recipeById(diet.meals[slot]);
-                if (!r) return null;
-                const h = HUE[r.cat];
-                return (
-                  <div
-                    key={slot}
-                    className="flex items-center gap-3.5 rounded-xl border border-border bg-surface px-3.5 py-3"
-                  >
-                    <div
-                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border"
-                      style={{ background: h.bg, borderColor: h.border, color: h.solid }}
-                    >
-                      <Icon name="utensils" size={18} />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-0.5 font-body text-[11px] uppercase tracking-[1px] text-muted">
-                        {slot}
-                      </div>
-                      <div className="truncate font-body text-[14px] text-text">
-                        {r.name}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="font-body text-[13px] text-text">
-                        {r.kcal} kcal
-                      </div>
-                      <div className="font-body text-[12px] text-muted">
-                        {r.p}g prot.
-                      </div>
-                    </div>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="font-body text-[15px] font-medium text-text">
+                    {diet.name}
+                  </span>
+                  <div className="flex gap-2">
+                    <Badge>{COPY.diets.kcalBadge(diet.target.kcal)}</Badge>
+                    <Badge>{COPY.diets.proteinBadge(diet.target.p)}</Badge>
                   </div>
-                );
-              })}
-            </div>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {MEAL_SLOTS.map((slot) => {
+                    const meal = diet.meals[slot];
+                    const r = recipeById(meal.selected);
+                    if (!r) return null;
+                    const h = HUE[r.cat];
+                    return (
+                      <div
+                        key={slot}
+                        className="flex items-center gap-3.5 rounded-xl border border-border bg-surface px-3.5 py-3"
+                      >
+                        <div
+                          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border"
+                          style={{ background: h.bg, borderColor: h.border, color: h.solid }}
+                        >
+                          <Icon name="utensils" size={18} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-0.5 font-body text-[11px] uppercase tracking-[1px] text-muted">
+                            {slot}
+                            {meal.options.length > 1 &&
+                              ` · ${T.optionCount(meal.options.length)}`}
+                          </div>
+                          <div className="truncate font-body text-[14px] text-text">
+                            {r.name}
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="font-body text-[13px] text-text">
+                            {COPY.diets.kcalBadge(r.kcal)}
+                          </div>
+                          <div className="font-body text-[12px] text-muted">
+                            {COPY.diets.proteinBadge(r.p)}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </Card>
         </div>
       </div>

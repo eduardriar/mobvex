@@ -42,7 +42,11 @@ const ICON_PATHS: Record<string, string> = {
   grip:
     '<circle cx="9" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1" fill="currentColor" stroke="none"/>',
   message: '<path d="M4 5h16v11H9l-5 4Z"/>',
+  camera:
+    '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z"/><circle cx="12" cy="14" r="3.5"/>',
   award: '<circle cx="12" cy="9" r="5"/><path d="M9 13.5 7 21l5-3 5 3-2-7.5"/>',
+  apple:
+    '<path d="M12 7c-2-2-6-2-6 3 0 4 3 9 6 9s6-5 6-9c0-5-4-5-6-3Z"/><path d="M12 7c0-2 1-3 3-3.5"/>',
 };
 
 export type IconName = keyof typeof ICON_PATHS;
