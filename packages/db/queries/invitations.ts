@@ -1,5 +1,10 @@
 import { supabase } from '../client';
-import type { Invitation, InvitationWithTrainer, NewInvitation } from '../types';
+import type {
+  Goal,
+  Invitation,
+  InvitationWithTrainer,
+  NewInvitation,
+} from '../types';
 
 /**
  * Resolve an invite token to the invitation plus a summary of the inviting
@@ -23,6 +28,26 @@ export async function createInvitation(invitation: NewInvitation) {
     .insert(invitation)
     .select()
     .single<Invitation>();
+}
+
+/**
+ * Atomically claim a pending invitation for the signed-in student
+ * (`claim_student_invitation` RPC, SECURITY DEFINER). Adopts the trainer's
+ * placeholder `users` row when one exists — the `students` row keeps its id,
+ * so pre-assigned routines/diets stay attached — otherwise creates the
+ * profile + students link from scratch. Marks the invitation accepted.
+ * Returns the student id linked to the caller. Idempotent, safe to retry.
+ */
+export async function claimStudentInvitation(input: {
+  invitationId: string;
+  name: string;
+  goal: Goal;
+}) {
+  return supabase.rpc('claim_student_invitation', {
+    p_invitation_id: input.invitationId,
+    p_name: input.name,
+    p_goal: input.goal,
+  }) as unknown as Promise<{ data: string | null; error: Error | null }>;
 }
 
 /** Mark an invitation accepted once the student completes registration. */

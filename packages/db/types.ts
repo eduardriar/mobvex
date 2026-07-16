@@ -340,11 +340,15 @@ export type ProgressWithSignedPhotos = Progress & {
  * stay linked. The database fills `created_at`.
  */
 export type NewUser = Omit<User, 'created_at'>;
-export type NewStudent = Omit<Student, 'id' | 'created_at'>;
+/** A new student link. `invite_token` may be omitted — the database generates it. */
+export type NewStudent = Omit<Student, 'id' | 'invite_token' | 'created_at'> & {
+  invite_token?: string;
+};
+/** A new invitation. `token` may be omitted — the database generates one. */
 export type NewInvitation = Omit<
   Invitation,
-  'id' | 'status' | 'accepted_at' | 'created_at'
->;
+  'id' | 'token' | 'status' | 'accepted_at' | 'created_at'
+> & { token?: string };
 export type NewRoutine = Omit<Routine, 'id' | 'created_at'>;
 export type NewExercise = Omit<Exercise, 'id' | 'created_at'>;
 export type NewRoutineExercise = Omit<RoutineExercise, 'id'>;

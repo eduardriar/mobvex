@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { createStudentForTrainer, getSession } from "@mobvex/db";
-import type { Goal, Student } from "@mobvex/db";
+import type { Goal, Invitation, Student } from "@mobvex/db";
 import type { GoalKey, NewStudentPayload } from "@/lib/types";
 
 /* Recomposición has no DB value of its own yet; nearest match. */
@@ -23,7 +23,10 @@ export function useCreateStudent() {
     name,
     email,
     goal,
-  }: NewStudentPayload): Promise<Student | null> => {
+  }: NewStudentPayload): Promise<{
+    student: Student;
+    invitation: Invitation;
+  } | null> => {
     setError(null);
     setCreating(true);
     try {

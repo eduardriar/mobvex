@@ -109,6 +109,48 @@ export const COPY = {
     mealsCount: (n: number, total: number) => `${n}/${total} comidas`,
     proteinPct: (pct: number) => `${pct}% kcal de proteína`,
   },
+  newStudent: {
+    title: "Nuevo alumno",
+    subtitle: "Añádelo a tu lista de alumnos",
+    nameLabel: "Nombre completo",
+    namePlaceholder: "Ej. Marta Ibáñez",
+    emailLabel: "Correo",
+    emailPlaceholder: "alumno@correo.com",
+    goalLabel: "Objetivo",
+    cancel: "Cancelar",
+    create: "Crear alumno",
+    creating: "Creando...",
+    created: {
+      title: "¡Alumno creado!",
+      message: (name: string) =>
+        `${name} ya está en tu lista de alumnos. Envíale este enlace para que complete su registro en la app móvil.`,
+      copy: "Copiar",
+      copied: "¡Copiado!",
+      shareWhatsApp: "Compartir por WhatsApp",
+      whatsappMessage: (name: string, link: string) =>
+        `¡Hola ${name}! Te invito a Mobvex, la app donde llevaremos tu entrenamiento. Regístrate aquí: ${link}`,
+      viewRoster: "Ver lista",
+      viewProfile: "Ver ficha",
+    },
+  },
+  invite: {
+    pageTitle: "Mobvex — Invitación",
+    invitedBy: (trainer: string) => `${trainer} te invitó a entrenar en Mobvex`,
+    trainerRole: "Entrenador personal",
+    subtitle: "Completa tu registro desde la app móvil.",
+    openApp: "Abrir la app",
+    noApp: "¿No tienes la app?",
+    noAppHint:
+      "Instala Mobvex en tu teléfono y vuelve a abrir este enlace para completar tu registro.",
+    copyLink: "Copiar enlace",
+    copied: "¡Copiado!",
+    loading: "Cargando invitación...",
+    invalid: {
+      title: "Invitación no válida",
+      message:
+        "Este enlace ya fue usado o ha caducado. Pídele a tu entrenador que te envíe uno nuevo.",
+    },
+  },
   sidebar: {
     trainerRole: "Entrenador personal",
     logout: "Salir",

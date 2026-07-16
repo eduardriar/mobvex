@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useCreateStudent } from "@/hooks/useCreateStudent";
+import { COPY } from "@/lib/copy";
 import { createStudent as addStudentToRoster, GOAL_HUE } from "@/lib/data";
 import { buildInviteLink } from "@/lib/invite";
 import type { GoalKey } from "@/lib/types";
@@ -15,6 +16,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Text } from "@/components/ui/Text";
 
 const GOALS = Object.keys(GOAL_HUE) as GoalKey[];
+const T = COPY.newStudent;
 
 type Props = {
   onDone: (id: string) => void;
@@ -38,13 +40,13 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
   const submit = async () => {
     if (!valid || creating) return;
     const payload = { name: name.trim(), email: email.trim(), goal };
-    const student = await createStudent(payload);
-    if (student) {
+    const result = await createStudent(payload);
+    if (result) {
       const id = addStudentToRoster(payload);
       setCreated({
         id,
         name: payload.name,
-        inviteLink: buildInviteLink(student.invite_token),
+        inviteLink: buildInviteLink(result.invitation.token),
       });
     }
   };
@@ -60,6 +62,16 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
     }
   };
 
+  const shareOnWhatsApp = () => {
+    if (!created) return;
+    const message = T.created.whatsappMessage(created.name, created.inviteLink);
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(message)}`,
+      "_blank",
+      "noopener",
+    );
+  };
+
   return (
     <div className="flex flex-1 items-start justify-center overflow-y-auto px-8 py-12">
       <div className="w-full max-w-[480px]">
@@ -70,10 +82,10 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
             </div>
             <div>
               <Text variant="cardName" className="text-[20px]">
-                Nuevo alumno
+                {T.title}
               </Text>
               <div className="mt-0.5 font-body text-[13px] text-muted">
-                Añádelo a tu lista de alumnos
+                {T.subtitle}
               </div>
             </div>
           </div>
@@ -82,22 +94,22 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
 
           <div className="flex flex-col gap-[18px]">
             <Input
-              label="Nombre completo"
-              placeholder="Ej. Marta Ibáñez"
+              label={T.nameLabel}
+              placeholder={T.namePlaceholder}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
             <Input
-              label="Correo"
+              label={T.emailLabel}
               type="email"
-              placeholder="alumno@correo.com"
+              placeholder={T.emailPlaceholder}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
 
             <div>
               <div className="mb-2.5 font-body text-[12px] tracking-[0.5px] text-muted">
-                Objetivo
+                {T.goalLabel}
               </div>
               <div className="flex flex-wrap gap-2.5">
                 {GOALS.map((g) => (
@@ -130,7 +142,7 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
               disabled={creating}
               className="flex-1"
             >
-              Cancelar
+              {T.cancel}
             </Button>
             <Button
               variant="primary"
@@ -139,7 +151,7 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
               className="flex-1 whitespace-nowrap"
               leadingIcon={<Icon name="plus" size={18} color="#0A0A0B" />}
             >
-              {creating ? "Creando..." : "Crear alumno"}
+              {creating ? T.creating : T.create}
             </Button>
           </div>
         </Card>
@@ -152,11 +164,10 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
           </div>
           <div>
             <Text variant="cardName" className="text-[20px]">
-              ¡Alumno creado!
+              {T.created.title}
             </Text>
             <p className="mt-2 font-body text-[14px] leading-[1.5] text-muted">
-              {created?.name} ya está en tu lista de alumnos. Envíale este
-              enlace para que complete su registro en la app móvil.
+              {created ? T.created.message(created.name) : ""}
             </p>
           </div>
           <div className="flex w-full items-center gap-2.5">
@@ -172,23 +183,32 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
               className="shrink-0 whitespace-nowrap"
               leadingIcon={<Icon name={copied ? "check" : "copy"} size={16} />}
             >
-              {copied ? "¡Copiado!" : "Copiar"}
+              {copied ? T.created.copied : T.created.copy}
             </Button>
           </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            fullWidth
+            onClick={shareOnWhatsApp}
+            leadingIcon={<Icon name="message" size={16} />}
+          >
+            {T.created.shareWhatsApp}
+          </Button>
           <div className="flex w-full gap-2.5">
             <Button
               variant="secondary"
               onClick={onCancel}
               className="flex-1 whitespace-nowrap"
             >
-              Ver lista
+              {T.created.viewRoster}
             </Button>
             <Button
               variant="primary"
               onClick={() => created && onDone(created.id)}
               className="flex-1 whitespace-nowrap"
             >
-              Ver ficha
+              {T.created.viewProfile}
             </Button>
           </div>
         </div>

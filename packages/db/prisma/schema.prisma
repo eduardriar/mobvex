@@ -416,7 +416,7 @@ model MealRecipeItem {
 model Invitation {
   id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   trainerId  String           @map("trainer_id") @db.Uuid
-  token      String           @unique
+  token      String           @unique @default(dbgenerated("(gen_random_uuid())::text"))
   email      String?
   status     InvitationStatus @default(pending)
   expiresAt  DateTime?        @map("expires_at") @db.Timestamptz(6)
