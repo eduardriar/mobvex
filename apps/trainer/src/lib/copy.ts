@@ -152,8 +152,21 @@ export const COPY = {
     },
   },
   sidebar: {
+    brand: "MOBVEX",
+    brandTag: "Entrenador",
+    nav: {
+      roster: "Alumnos",
+      exercises: "Ejercicios",
+      diets: "Dietas",
+      settings: "Ajustes",
+    },
     trainerRole: "Entrenador personal",
     logout: "Salir",
+    openMenu: "Abrir menú",
+    closeMenu: "Cerrar menú",
+  },
+  topbar: {
+    searchPlaceholder: "Buscar alumno",
   },
   student: {
     dietTitle: "Dieta actual",

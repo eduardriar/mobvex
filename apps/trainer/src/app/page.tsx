@@ -32,6 +32,7 @@ export default function Page() {
   const [authed, setAuthed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<View>("roster");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [studentId, setStudentId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
 
@@ -79,13 +80,17 @@ export default function Page() {
           if (n === "roster") setView("roster");
           if (n === "exercises") setView("exercises");
           if (n === "diets") setView("diets");
+          setSidebarOpen(false);
         }}
         onLogout={handleLogout}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
       />
       <main className="flex h-full min-w-0 flex-1 flex-col">
         {view === "roster" && (
           <>
             <Topbar
+              onMenu={() => setSidebarOpen(true)}
               title="Mis alumnos"
               subtitle="Gestiona tu equipo y su progreso"
               search={search}
@@ -107,6 +112,7 @@ export default function Page() {
         {view === "newStudent" && (
           <>
             <Topbar
+              onMenu={() => setSidebarOpen(true)}
               title="Nuevo alumno"
               subtitle="Añade a alguien a tu lista"
               onBack={() => setView("roster")}
@@ -121,6 +127,7 @@ export default function Page() {
         {view === "exercises" && (
           <>
             <Topbar
+              onMenu={() => setSidebarOpen(true)}
               title={COPY.exercises.title}
               subtitle={COPY.exercises.subtitle}
             />
@@ -130,7 +137,11 @@ export default function Page() {
 
         {view === "diets" && (
           <>
-            <Topbar title={COPY.diets.title} subtitle={COPY.diets.subtitle} />
+            <Topbar
+              onMenu={() => setSidebarOpen(true)}
+              title={COPY.diets.title}
+              subtitle={COPY.diets.subtitle}
+            />
             <DietsScreen />
           </>
         )}
@@ -138,6 +149,7 @@ export default function Page() {
         {view === "student" && studentId && (
           <>
             <Topbar
+              onMenu={() => setSidebarOpen(true)}
               title="Ficha del alumno"
               subtitle={student?.name}
               onBack={() => setView("roster")}
@@ -153,6 +165,7 @@ export default function Page() {
         {view === "routine" && studentId && (
           <>
             <Topbar
+              onMenu={() => setSidebarOpen(true)}
               title="Editor de rutina"
               subtitle={student ? `Para ${student.name}` : ""}
               onBack={() => setView("student")}
@@ -164,6 +177,7 @@ export default function Page() {
         {view === "diet" && studentId && (
           <>
             <Topbar
+              onMenu={() => setSidebarOpen(true)}
               title="Editor de dieta"
               subtitle={student ? `Para ${student.name}` : ""}
               onBack={() => setView("student")}
