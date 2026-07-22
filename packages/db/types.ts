@@ -61,6 +61,11 @@ export type Routine = {
  *
  * `trainer_id` is null for the shared global catalog and set for a trainer's
  * own private exercise.
+ *
+ * `media_url` holds either a YouTube link or a direct image link — the kind
+ * is derived from the URL shape at render time via `isYouTubeUrl`, never
+ * stored separately. `media_thumbnail_url`/`media_title` are only populated
+ * for YouTube links (fetched once via oEmbed when the trainer saves).
  */
 export type Exercise = {
   id: string;
@@ -68,7 +73,9 @@ export type Exercise = {
   name: string;
   muscle_group?: string;
   equipment?: string;
-  video_url?: string;
+  media_url?: string | null;
+  media_thumbnail_url?: string | null;
+  media_title?: string | null;
   created_at: string;
 };
 
@@ -240,6 +247,7 @@ export type Recipe = {
   carbs_g?: number;
   fat_g?: number;
   prep_minutes?: number;
+  image_url?: string | null;
   created_at: string;
 };
 

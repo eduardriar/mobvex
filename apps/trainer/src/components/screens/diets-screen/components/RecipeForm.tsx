@@ -1,8 +1,9 @@
-/* Mobvex Trainer — new recipe modal form: picture placeholder, name, meal
+/* Mobvex Trainer — new recipe modal form: picture upload, name, meal
    category, ingredients builder with live macro estimation. */
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { getSession, uploadRecipeImage } from "@mobvex/db";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/Button";
 import { ChipRow } from "@/components/ui/ChipRow";
@@ -45,7 +46,10 @@ export function RecipeForm({ error, onCancel, onSave }: Props) {
   const [meal, setMeal] = useState<MealCategory>(
     MEAL_CATEGORIES[0] ?? "Desayuno",
   );
-  const [hasMedia, setHasMedia] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
+  const [imageUploading, setImageUploading] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [ingredients, setIngredients] = useState<RecipeIngredient[]>([]);
   const [ingName, setIngName] = useState("");
@@ -53,6 +57,38 @@ export function RecipeForm({ error, onCancel, onSave }: Props) {
   const [ingUnit, setIngUnit] = useState<IngredientUnit>("gr");
 
   const valid = name.trim().length > 1 && ingredients.length > 0;
+
+  const handleFileSelected = async (file: File) => {
+    setImageUploading(true);
+    setImageError(false);
+
+    const {
+      data: { session },
+    } = await getSession();
+    if (!session) {
+      setImageUploading(false);
+      setImageError(true);
+      return;
+    }
+
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${session.user.id}/${crypto.randomUUID()}.${ext}`;
+    const buffer = await file.arrayBuffer();
+
+    const { data, error: uploadError } = await uploadRecipeImage({
+      path,
+      data: buffer,
+      contentType: file.type,
+    });
+    setImageUploading(false);
+
+    if (uploadError || !data) {
+      setImageError(true);
+      return;
+    }
+
+    setImageUrl(data.publicUrl);
+  };
 
   const addIngredient = () => {
     const qty = parseFloat(ingQty);
@@ -83,7 +119,7 @@ export function RecipeForm({ error, onCancel, onSave }: Props) {
 
   const submit = () => {
     if (!valid) return;
-    onSave({ name, meal, hasMedia, ingredients, totals });
+    onSave({ name, meal, imageUrl: imageUrl || undefined, ingredients, totals });
   };
 
   return (
@@ -107,20 +143,52 @@ export function RecipeForm({ error, onCancel, onSave }: Props) {
         </button>
       </div>
 
-      <div className="grid grid-cols-[180px_1fr] gap-6">
-        {/* picture placeholder */}
+      <div className="flex flex-col gap-6 sm:grid sm:grid-cols-[180px_1fr]">
+        {/* picture upload */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (file) void handleFileSelected(file);
+          }}
+        />
         <button
           type="button"
-          onClick={() => setHasMedia((v) => !v)}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={imageUploading}
           className={cn(
-            "flex h-[180px] cursor-pointer flex-col items-center justify-center gap-2.5 rounded-card border border-dashed bg-surface-2",
-            hasMedia ? "border-accent text-accent" : "border-border text-muted",
+            "relative flex h-[180px] cursor-pointer flex-col items-center justify-center gap-2.5 overflow-hidden rounded-card border border-dashed bg-surface-2",
+            imageUrl && !imageError
+              ? "border-accent text-accent"
+              : imageError
+                ? "border-accent-2 text-accent-2"
+                : "border-border text-muted",
           )}
         >
-          <Icon name={hasMedia ? "check" : "camera"} size={26} />
-          <span className="px-3.5 text-center font-body text-[12px]">
-            {hasMedia ? T.form.mediaAdded : T.form.mediaEmpty}
-          </span>
+          {imageUploading ? (
+            <span className="px-3.5 text-center font-body text-[12px]">
+              {T.form.uploading}
+            </span>
+          ) : imageUrl && !imageError ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a local/optimizable asset
+            <img
+              src={imageUrl}
+              alt=""
+              onError={() => setImageError(true)}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <>
+              <Icon name="camera" size={26} />
+              <span className="px-3.5 text-center font-body text-[12px]">
+                {imageError ? T.form.uploadFailed : T.form.mediaEmpty}
+              </span>
+            </>
+          )}
         </button>
 
         <div className="flex flex-col gap-4">
@@ -146,7 +214,7 @@ export function RecipeForm({ error, onCancel, onSave }: Props) {
           {T.form.ingredientsLabel}
         </div>
 
-        <div className="mb-3 grid grid-cols-[1.6fr_0.8fr_1fr_auto] gap-2.5">
+        <div className="mb-3 flex flex-col gap-2.5 sm:grid sm:grid-cols-[1.6fr_0.8fr_1fr_auto]">
           <input
             list="ingredient-names"
             value={ingName}
@@ -182,7 +250,7 @@ export function RecipeForm({ error, onCancel, onSave }: Props) {
             type="button"
             onClick={addIngredient}
             title={T.form.addIngredient}
-            className="flex w-11 shrink-0 cursor-pointer items-center justify-center rounded-input bg-accent text-on-accent"
+            className="flex w-full shrink-0 cursor-pointer items-center justify-center rounded-input bg-accent text-on-accent sm:w-11"
           >
             <Icon name="plus" size={18} color="#0A0A0B" />
           </button>
@@ -201,7 +269,7 @@ export function RecipeForm({ error, onCancel, onSave }: Props) {
         )}
 
         {/* running macro totals */}
-        <div className="grid grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           <MacroPreview
             label={T.form.macros.kcal}
             value={Math.round(totals.kcal)}
@@ -229,13 +297,13 @@ export function RecipeForm({ error, onCancel, onSave }: Props) {
         <p className="mt-4 font-body text-[13px] text-accent-2">{error}</p>
       )}
 
-      <div className="mt-[22px] flex justify-end gap-2.5">
+      <div className="mt-[22px] flex flex-col gap-2.5 sm:flex-row sm:justify-end">
         <Button variant="secondary" onClick={onCancel}>
           {T.form.cancel}
         </Button>
         <Button
           variant="primary"
-          disabled={!valid}
+          disabled={!valid || imageUploading}
           onClick={submit}
           className="whitespace-nowrap"
           leadingIcon={<Icon name="check" size={16} color="#0A0A0B" />}

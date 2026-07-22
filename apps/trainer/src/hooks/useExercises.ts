@@ -87,6 +87,9 @@ export function useExercises() {
         name: payload.name.trim(),
         muscle_group: payload.muscle,
         equipment: payload.equipment,
+        media_url: payload.mediaUrl || null,
+        media_title: payload.mediaTitle || null,
+        media_thumbnail_url: payload.mediaThumbnailUrl || null,
       });
       if (updateError) return updateError.message;
 

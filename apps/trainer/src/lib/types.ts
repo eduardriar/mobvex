@@ -56,13 +56,21 @@ export type EquipmentOption =
   | "Polea"
   | "Banda";
 
-/** An exercise in the trainer's repository (Ejercicios screen). */
+/**
+ * An exercise in the trainer's repository (Ejercicios screen). `mediaUrl`
+ * holds either a YouTube link or a direct image link — the kind is derived
+ * from the URL shape (see `isYouTubeUrl` from `@mobvex/db`), never stored
+ * separately. `mediaTitle`/`mediaThumbnailUrl` are only ever populated for
+ * YouTube links.
+ */
 export type CatalogExercise = {
   id: string;
   name: string;
   muscle: MuscleGroup;
   equipment: EquipmentOption;
-  hasMedia?: boolean;
+  mediaUrl?: string;
+  mediaTitle?: string;
+  mediaThumbnailUrl?: string;
 };
 
 export type NewExercisePayload = Omit<CatalogExercise, "id">;
@@ -119,14 +127,14 @@ export type Recipe = {
   time: number;
   tag: string;
   meal: MealCategory;
-  hasMedia?: boolean;
+  imageUrl?: string;
   ingredients?: RecipeIngredient[];
 };
 
 export type NewRecipePayload = {
   name: string;
   meal: MealCategory;
-  hasMedia: boolean;
+  imageUrl?: string;
   ingredients: RecipeIngredient[];
   totals: Macros;
 };

@@ -136,6 +136,17 @@ export async function getCurrentUser() {
 }
 
 /**
+ * Dev-only: sign in with email + password, bypassing the student OTP flow.
+ * Only succeeds for accounts that already have a password set on
+ * `auth.users` (e.g. pre-provisioned test/seed accounts) — the normal
+ * passwordless registration path never sets one. Callers must gate this
+ * behind `__DEV__`; it exists purely to skip email delivery while testing.
+ */
+export async function devLoginWithPassword(email: string, password: string) {
+  return supabase.auth.signInWithPassword({ email, password });
+}
+
+/**
  * Return the user's profile row, creating it on first sign-in. After OTP
  * verification the auth user exists but has no `users` row yet; this fills that
  * gap idempotently. `input.id` must equal the authenticated `auth.uid()`.

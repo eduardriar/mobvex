@@ -23,14 +23,23 @@ export function RecipeTile({ recipe }: Props) {
     <div className="rounded-card border border-border bg-surface p-[18px]">
       <div className="mb-3.5 flex items-center gap-3">
         <div
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[12px] border"
+          className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[12px] border"
           style={{
             background: hue.bg,
             borderColor: hue.border,
             color: hue.solid,
           }}
         >
-          <Icon name={recipe.hasMedia ? "camera" : "utensils"} size={20} />
+          {recipe.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- Supabase Storage URL, not a local/optimizable asset
+            <img
+              src={recipe.imageUrl}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <Icon name="utensils" size={20} />
+          )}
         </div>
         <div className="min-w-0">
           <Text variant="cardName" as="div" className="truncate text-[14px]">

@@ -1,6 +1,8 @@
 import { Feather } from '@expo/vector-icons';
-import { Image, StyleSheet, View } from 'react-native';
-import { Card, Text, colors, fonts, fontSizes, radius, spacing } from '@mobvex/ui';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Card, Text, colors, fonts, fontSizes, overlays, radius, spacing } from '@mobvex/ui';
+import { isYouTubeUrl, parseYouTubeVideoId } from '@mobvex/db';
 import type { SetLogWithExercise } from '@mobvex/db';
 import { SetRow } from './SetRow';
 
@@ -14,11 +16,6 @@ type SetChanges = {
 type Props = {
   /** The set logs for a single exercise, ordered by set number. */
   setLogs: SetLogWithExercise[];
-  /**
-   * Exercise thumbnail. TEMPLATE: wire this to the exercise's image URL once the
-   * catalog stores one — until then a placeholder is shown.
-   */
-  imageUrl?: string;
   onChangeSet: (setLogId: string, changes: SetChanges) => void;
 };
 
@@ -30,7 +27,8 @@ const LEAD_COLUMN = 44;
  * One exercise within the active session: a thumbnail + prescription header and
  * a grid of editable set rows. Expects all logs to belong to the same exercise.
  */
-export function SessionExerciseCard({ setLogs, imageUrl, onChangeSet }: Props) {
+export function SessionExerciseCard({ setLogs, onChangeSet }: Props) {
+  const router = useRouter();
   const first = setLogs[0];
   if (!first) return null;
 
@@ -39,17 +37,51 @@ export function SessionExerciseCard({ setLogs, imageUrl, onChangeSet }: Props) {
   // The "active" set is the first one not yet completed.
   const activeId = setLogs.find((log) => !log.completed)?.id;
 
+  const mediaUrl = exercise.media_url;
+  const isVideo = !!mediaUrl && isYouTubeUrl(mediaUrl);
+  const thumbnailUrl = isVideo ? exercise.media_thumbnail_url : mediaUrl;
+
+  const openVideo = () => {
+    if (!mediaUrl) return;
+    const videoId = parseYouTubeVideoId(mediaUrl);
+    if (!videoId) return;
+    router.push({
+      pathname: '/student/workout/video/[videoId]',
+      params: { videoId, title: exercise.name },
+    });
+  };
+
+  const thumb = (
+    <View style={styles.thumb}>
+      {thumbnailUrl ? (
+        <>
+          <Image source={{ uri: thumbnailUrl }} style={styles.thumbImage} />
+          {isVideo && (
+            <View style={styles.playOverlay}>
+              <Feather name="play" size={18} color={colors.text} />
+            </View>
+          )}
+        </>
+      ) : (
+        <Feather name="image" size={22} color={colors.muted} />
+      )}
+    </View>
+  );
+
   return (
     <Card>
       <View style={styles.header}>
-        <View style={styles.thumb}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.thumbImage} />
-          ) : (
-            // Placeholder until the exercise image URL is wired in.
-            <Feather name="image" size={22} color={colors.muted} />
-          )}
-        </View>
+        {isVideo ? (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Ver video del ejercicio"
+            onPress={openVideo}
+          >
+            {thumb}
+          </Pressable>
+        ) : (
+          thumb
+        )}
         <View style={styles.headerText}>
           <Text style={styles.name}>{exercise.name}</Text>
           <Text style={styles.meta}>
@@ -114,6 +146,12 @@ const styles = StyleSheet.create({
   thumbImage: {
     width: '100%',
     height: '100%',
+  },
+  playOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: overlays.mediaScrim,
   },
   headerText: {
     flex: 1,

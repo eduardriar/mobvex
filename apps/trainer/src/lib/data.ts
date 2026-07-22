@@ -333,8 +333,7 @@ export const EQUIPMENT_OPTIONS: EquipmentOption[] = [
 /* Shapes a DB exercises row for the Ejercicios screen. Rows whose
    muscle_group/equipment fall outside the app vocabularies (e.g. data
    predating the Spanish buckets) fall back to a bucket instead of silently
-   vanishing from the grouped UI. `hasMedia` derives from video_url — the
-   form's media toggle is a placeholder and is never persisted. */
+   vanishing from the grouped UI. */
 export function exerciseFromDb(row: DbExercise): CatalogExercise {
   return {
     id: row.id,
@@ -345,7 +344,9 @@ export function exerciseFromDb(row: DbExercise): CatalogExercise {
     equipment: (EQUIPMENT_OPTIONS as string[]).includes(row.equipment ?? "")
       ? (row.equipment as EquipmentOption)
       : "Peso corporal",
-    hasMedia: !!row.video_url,
+    mediaUrl: row.media_url ?? undefined,
+    mediaTitle: row.media_title ?? undefined,
+    mediaThumbnailUrl: row.media_thumbnail_url ?? undefined,
   };
 }
 
@@ -360,6 +361,9 @@ export function exercisePayloadToDb(
     name: payload.name.trim(),
     muscle_group: payload.muscle,
     equipment: payload.equipment,
+    media_url: payload.mediaUrl || null,
+    media_title: payload.mediaTitle || null,
+    media_thumbnail_url: payload.mediaThumbnailUrl || null,
   };
 }
 
@@ -475,7 +479,7 @@ export function recipeFromDb(row: RecipeWithItems): Recipe {
     time: row.prep_minutes ?? 0,
     tag: meal,
     meal,
-    hasMedia: false,
+    imageUrl: row.image_url ?? undefined,
     ingredients: row.recipe_items.map((item) => ({
       name: item.food,
       qty: item.qty_value ?? 0,
@@ -508,6 +512,7 @@ export function recipePayloadToDb(
       protein_g: Math.round(payload.totals.p),
       carbs_g: Math.round(payload.totals.c),
       fat_g: Math.round(payload.totals.f),
+      image_url: payload.imageUrl || null,
     },
     items: payload.ingredients.map((ingredient, index) => ({
       food: ingredient.name,
