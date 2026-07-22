@@ -8,7 +8,7 @@ const STATS: Array<[string, string]> = [
 
 export function BrandPanel() {
   return (
-    <div className="relative flex flex-col overflow-hidden border-b border-border bg-surface px-8 py-10 lg:w-[46%] lg:shrink-0 lg:border-b-0 lg:border-r lg:px-[52px] lg:py-12">
+    <div className="relative hidden flex-col overflow-hidden border-b border-border bg-surface px-8 py-10 lg:flex lg:w-[46%] lg:shrink-0 lg:border-b-0 lg:border-r lg:px-[52px] lg:py-12">
       <div
         className="pointer-events-none absolute inset-0"
         style={{

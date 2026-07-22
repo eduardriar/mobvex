@@ -55,7 +55,7 @@ export default function Page() {
 
   if (!authed) {
     return (
-      <div className="h-screen w-screen bg-bg">
+      <div className="h-screen w-screen overflow-y-auto bg-bg">
         <AuthScreen onAuth={() => {}} />
       </div>
     );

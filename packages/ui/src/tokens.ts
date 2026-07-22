@@ -42,6 +42,9 @@ export const overlays = {
   // Secondary accent (#FF4D6D)
   alertBg: 'rgba(255, 77, 109, 0.10)',
   alertBorder: 'rgba(255, 77, 109, 0.25)',
+
+  // Dark scrim (bg #0A0A0B) over a photo/video thumbnail, for icon contrast.
+  mediaScrim: 'rgba(10, 10, 11, 0.35)',
 } as const;
 
 /**

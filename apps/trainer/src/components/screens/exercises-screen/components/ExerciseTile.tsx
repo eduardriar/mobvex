@@ -1,7 +1,8 @@
-/* Mobvex Trainer — repository exercise tile (media state, name, equipment,
-   edit action). */
+/* Mobvex Trainer — repository exercise tile (media thumbnail, name,
+   equipment, edit action). */
 "use client";
 
+import { isYouTubeUrl } from "@mobvex/db";
 import { Icon } from "@/components/Icon";
 import { cn } from "@/lib/cn";
 import { COPY } from "@/lib/copy";
@@ -15,17 +16,36 @@ type Props = {
 };
 
 export function ExerciseTile({ exercise, onEdit }: Props) {
+  const isVideo = !!exercise.mediaUrl && isYouTubeUrl(exercise.mediaUrl);
+  const thumbnailSrc = isVideo ? exercise.mediaThumbnailUrl : exercise.mediaUrl;
+
   return (
     <div className="flex items-center gap-3 rounded-card border border-border bg-surface p-3">
       <div
         className={cn(
-          "flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-[10px] border",
-          exercise.hasMedia
-            ? "bg-accent-icon border-accent-icon-border text-accent"
+          "relative flex h-[42px] w-[42px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] border",
+          thumbnailSrc
+            ? "border-accent-icon-border"
             : "bg-surface-2 border-border text-muted",
         )}
       >
-        <Icon name={exercise.hasMedia ? "camera" : "dumbbell"} size={18} />
+        {thumbnailSrc ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element -- arbitrary external URL, not a local/optimizable asset */}
+            <img
+              src={thumbnailSrc}
+              alt=""
+              className="h-full w-full object-cover"
+            />
+            {isVideo && (
+              <span className="absolute inset-0 flex items-center justify-center bg-bg/35 text-text">
+                <Icon name="play" size={16} />
+              </span>
+            )}
+          </>
+        ) : (
+          <Icon name="dumbbell" size={18} />
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="truncate font-body text-[13px] font-medium text-text">

@@ -124,19 +124,27 @@ model Routine {
 }
 
 /// A reusable exercise in the catalog. Defines only what the exercise *is*
-/// (name, target muscle, demo video) — never how it is prescribed. Prescription
+/// (name, target muscle, demo media) — never how it is prescribed. Prescription
 /// (sets/reps/rest/order) lives on RoutineExercise.
 ///
 /// `trainerId` makes ownership hybrid: NULL rows are the shared global catalog
 /// (seeded), while a set `trainerId` is a private exercise owned by one trainer.
+///
+/// `mediaUrl` holds either a YouTube link or a direct image link — the kind is
+/// derived from the URL shape at render time (see `isYouTubeUrl` in
+/// `packages/db/utils/youtube.ts`), never stored separately. `mediaThumbnailUrl`
+/// and `mediaTitle` are only ever populated for YouTube links (fetched once via
+/// YouTube's oEmbed endpoint when the trainer saves the exercise).
 model Exercise {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  trainerId   String?  @map("trainer_id") @db.Uuid
-  name        String
-  muscleGroup String?  @map("muscle_group")
-  equipment   String?
-  videoUrl    String?  @map("video_url")
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  trainerId         String?  @map("trainer_id") @db.Uuid
+  name              String
+  muscleGroup       String?  @map("muscle_group")
+  equipment         String?
+  mediaUrl          String?  @map("media_url")
+  mediaThumbnailUrl String?  @map("media_thumbnail_url")
+  mediaTitle        String?  @map("media_title")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   trainer          User?             @relation("TrainerExercises", fields: [trainerId], references: [id], onDelete: Cascade)
   routineExercises RoutineExercise[]
@@ -309,6 +317,7 @@ model Recipe {
   carbsG      Int?     @map("carbs_g")
   fatG        Int?     @map("fat_g")
   prepMinutes Int?     @map("prep_minutes")
+  imageUrl    String?  @map("image_url")
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   trainer         User?        @relation("TrainerRecipes", fields: [trainerId], references: [id], onDelete: Cascade)
