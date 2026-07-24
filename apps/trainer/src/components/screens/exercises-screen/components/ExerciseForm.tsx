@@ -260,14 +260,14 @@ export function ExerciseForm({
 
       <div className="mt-[22px] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {onDelete ? (
-          <button
-            type="button"
+          <Button
+            variant="ghost"
             onClick={onDelete}
             title={T.form.delete}
             className="flex w-fit cursor-pointer items-center p-1.5 text-accent-2 hover:opacity-80"
           >
             <Icon name="trash" size={18} />
-          </button>
+          </Button>
         ) : (
           <span />
         )}
