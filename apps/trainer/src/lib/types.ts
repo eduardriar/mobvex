@@ -143,8 +143,18 @@ export type NewRecipePayload = {
  * One meal slot of a diet: the recipe options the trainer offers (ordered,
  * first = default) and the student's current pick.
  */
+/**
+ * A recipe option assigned to a meal slot, with its per-student portion —
+ * ingredient quantities the trainer can edit, seeded from the catalog
+ * recipe's ingredients when first added.
+ */
+export type DietMealOption = {
+  recipeId: string;
+  ingredients: RecipeIngredient[];
+};
+
 export type DietMeal = {
-  options: string[];
+  options: DietMealOption[];
   selected: string | null;
 };
 

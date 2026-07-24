@@ -263,11 +263,10 @@ export function ExerciseForm({
           <Button
             variant="ghost"
             onClick={onDelete}
-            className="whitespace-nowrap"
-            style={{ color: "var(--color-accent-2)" }}
-            leadingIcon={<Icon name="trash" size={16} />}
+            title={T.form.delete}
+            className="flex w-fit cursor-pointer items-center p-1.5 text-accent-2 hover:opacity-80"
           >
-            {T.form.delete}
+            <Icon name="trash" size={18} />
           </Button>
         ) : (
           <span />
