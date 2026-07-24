@@ -40,7 +40,7 @@ export type { BadgeVariant } from './Badge';
 
 export { Chip } from './Chip';
 
-export { Avatar } from './Avatar';
+export { Avatar, initials } from './Avatar';
 export type { AvatarSize, AvatarVariant } from './Avatar';
 
 export { Screen } from './Screen';

@@ -15,14 +15,6 @@ export type ExpressRoutine = {
   meta: string;
 };
 
-export type Recipe = {
-  id: string;
-  emoji: string;
-  hue: CategoryHue;
-  name: string;
-  tags: string[];
-};
-
 export type Tip = {
   id: string;
   icon: string;
@@ -30,8 +22,6 @@ export type Tip = {
   title: string;
   text: string;
 };
-
-export const STUDENT = { name: 'Juan', initials: 'JP' } as const;
 
 export const TRAINER = {
   name: 'Carlos Moreno',
@@ -58,13 +48,6 @@ export const EXPRESS_ROUTINES: ExpressRoutine[] = [
   { id: 'hiit', time: '20', icon: '🔥', hue: 'orange', name: 'HIIT Total Body', meta: '6 ejercicios · sin equipo' },
   { id: 'mobility', time: '10', icon: '🧘', hue: 'blue', name: 'Movilidad AM', meta: '5 ejercicios · sin equipo' },
   { id: 'upper', time: '25', icon: '💪', hue: 'purple', name: 'Tren superior', meta: '5 ejercicios · mancuernas' },
-];
-
-export const RECIPES: Recipe[] = [
-  { id: 'bowl', emoji: '🥗', hue: 'orange', name: 'Bowl proteico de pollo', tags: ['480 kcal', '42g prot'] },
-  { id: 'shake', emoji: '🥤', hue: 'green', name: 'Batido post-entreno', tags: ['310 kcal', '35g prot'] },
-  { id: 'omelette', emoji: '🍳', hue: 'blue', name: 'Omelette de claras', tags: ['220 kcal', '28g prot'] },
-  { id: 'oats', emoji: '🍫', hue: 'purple', name: 'Overnight oats proteicos', tags: ['390 kcal', '30g prot'] },
 ];
 
 export const TIPS: Tip[] = [

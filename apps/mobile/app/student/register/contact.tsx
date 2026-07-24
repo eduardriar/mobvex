@@ -13,8 +13,6 @@ import { useRegister } from '@/components/register/RegisterContext';
 export default function Contact() {
   const router = useRouter();
   const { contact, update, trainer, inviteState } = useRegister();
-  console.log('>>>> Invite state',inviteState)
-  console.log('>>>> Trainer',trainer)
   const [error, setError] = useState<string | null>(null);
 
   // Dev-only: sign in with a password for a pre-provisioned test account,

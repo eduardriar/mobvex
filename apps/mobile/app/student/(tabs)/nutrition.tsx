@@ -1,7 +1,6 @@
-import { useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useRouter } from 'expo-router';
 import {
   Alert,
   Avatar,
@@ -15,10 +14,8 @@ import {
 } from '@mobvex/ui';
 import { MacroBar } from '@/components/nutrition/MacroBar';
 import { MealCard } from '@/components/nutrition/MealCard';
-import { useNutritionPlan } from '@/hooks/useNutritionPlan';
+import { getSelectedMealOption, useNutritionPlan } from '@/components/nutrition/NutritionProvider';
 
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
 // TODO: derive from the plan's trainer once joined into the query.
 const TRAINER_NAME = 'Carlos Moreno';
 
@@ -32,14 +29,7 @@ function assignedLabel(iso: string): string {
 
 export default function Nutrition() {
   const router = useRouter();
-  const { plan, loading, error, reload } = useNutritionPlan(TEMP_STUDENT_ID);
-
-  // Pick up a freshly changed meal option when returning from the picker.
-  useFocusEffect(
-    useCallback(() => {
-      reload();
-    }, [reload]),
-  );
+  const { plan, loading, error } = useNutritionPlan();
 
   const subtitle = plan
     ? `${plan.name} · ${assignedLabel(plan.created_at)}`
@@ -102,10 +92,7 @@ export default function Nutrition() {
             <Text variant="label">Comidas del día</Text>
             <View style={styles.meals}>
               {plan.meals.map((meal) => {
-                const option =
-                  meal.meal_recipes.find(
-                    (mr) => mr.recipe_id === meal.selected_recipe_id,
-                  ) ?? meal.meal_recipes[0];
+                const option = getSelectedMealOption(meal);
                 if (!option) return null;
                 return (
                   <MealCard

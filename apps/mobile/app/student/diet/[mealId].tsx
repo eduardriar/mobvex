@@ -4,15 +4,12 @@ import { Feather } from '@expo/vector-icons';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Button, Screen, Text, colors, spacing } from '@mobvex/ui';
 import { MealOptionCard } from '@/components/nutrition/MealOptionCard';
-import { useNutritionPlan } from '@/hooks/useNutritionPlan';
-
-// TODO: replace with the authenticated student's id once auth is wired.
-const TEMP_STUDENT_ID = '00000000-0000-0000-0000-000000000003';
+import { useNutritionPlan } from '@/components/nutrition/NutritionProvider';
 
 export default function MealPicker() {
   const router = useRouter();
   const { mealId } = useLocalSearchParams<{ mealId: string }>();
-  const { plan, loading, selectMeal } = useNutritionPlan(TEMP_STUDENT_ID);
+  const { plan, loading, selectMeal } = useNutritionPlan();
 
   const meal = plan?.meals.find((m) => m.id === mealId);
   const currentIndex = meal

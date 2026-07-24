@@ -1,6 +1,6 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Screen, Text, colors, spacing } from '@mobvex/ui';
+import { Screen, Text, colors, initials, spacing } from '@mobvex/ui';
 import { ActiveSessionBar } from '@/components/workout/ActiveSessionBar';
 import { useActiveSession } from '@/hooks/useActiveSession';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -15,10 +15,12 @@ import { ProgressBar } from '@/components/dashboard/ProgressBar';
 import { RecipeCard } from '@/components/dashboard/RecipeCard';
 import { TipCard } from '@/components/dashboard/TipCard';
 import {
+  getSelectedMealOption,
+  useNutritionPlan,
+} from '@/components/nutrition/NutritionProvider';
+import {
   EXPRESS_ROUTINES,
-  RECIPES,
   STATS,
-  STUDENT,
   TIPS,
   TODAY_ROUTINE,
   TRAINER,
@@ -28,8 +30,9 @@ import {
 /** Student home / dashboard. */
 export default function Dashboard() {
   const router = useRouter();
-  const { studentId } = useAuth();
+  const { studentId, profile } = useAuth();
   const { session } = useActiveSession(studentId);
+  const { plan } = useNutritionPlan();
 
   const completedSets =
     session?.set_logs.filter((log) => log.completed).length ?? 0;
@@ -40,8 +43,8 @@ export default function Dashboard() {
       <View style={styles.header}>
         <DashboardHeader
           greeting={greeting()}
-          name={STUDENT.name}
-          initials={STUDENT.initials}
+          name={profile?.name ?? ''}
+          initials={initials(profile?.name)}
           hasUnread
           // TODO: route to a notifications screen once it exists.
           onNotifications={undefined}
@@ -100,7 +103,7 @@ export default function Dashboard() {
             onAction={() => router.push('/student/routines')}
           />
         </View>
-        <ScrollView
+        {/* <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.rail}
@@ -117,10 +120,10 @@ export default function Dashboard() {
               onPress={() => router.push('/student/routines')}
             />
           ))}
-        </ScrollView>
+        </ScrollView> */}
       </View>
 
-      <View style={[styles.block, styles.section]}>
+      {/* <View style={[styles.block, styles.section]}>
         <SectionHeader title="Seguimiento" />
         <View style={[styles.sectionBody, styles.trackingGroup]}>
           <TrackingCard
@@ -162,7 +165,7 @@ export default function Dashboard() {
             </View>
           </TrackingCard>
         </View>
-      </View>
+      </View> */}
 
       <View style={styles.section}>
         <View style={styles.block}>
@@ -178,16 +181,23 @@ export default function Dashboard() {
           contentContainerStyle={styles.rail}
           style={styles.sectionBody}
         >
-          {RECIPES.map((r) => (
-            <RecipeCard
-              key={r.id}
-              emoji={r.emoji}
-              hue={r.hue}
-              name={r.name}
-              tags={r.tags}
-              onPress={() => router.push('/student/nutrition')}
-            />
-          ))}
+          {(plan?.meals ?? []).map((meal) => {
+            const option = getSelectedMealOption(meal);
+            if (!option) return null;
+            return (
+              <RecipeCard
+                key={meal.id}
+                emoji={meal.icon === 'droplet' ? '💧' : '🍽️'}
+                hue={meal.hue}
+                name={option.recipe.name}
+                tags={[
+                  `${option.kcal} kcal`,
+                  option.protein_g ? `${option.protein_g}g prot` : null,
+                ].filter((tag): tag is string => Boolean(tag))}
+                onPress={() => router.push(`/student/diet/${meal.id}`)}
+              />
+            );
+          })}
         </ScrollView>
       </View>
 

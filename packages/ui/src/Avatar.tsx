@@ -34,7 +34,7 @@ const INITIAL_SIZE: Record<AvatarSize, number> = {
   lg: 22,
 };
 
-function initials(name?: string): string {
+export function initials(name?: string): string {
   if (!name) return '';
   return name
     .trim()
