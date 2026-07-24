@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Screen, Text, colors, initials, spacing } from '@mobvex/ui';
 import { ActiveSessionBar } from '@/components/workout/ActiveSessionBar';
 import { useActiveSession } from '@/hooks/useActiveSession';
+import { useTrainingStats } from '@/hooks/useTrainingStats';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
 import { TrainerStrip } from '@/components/dashboard/TrainerStrip';
@@ -20,23 +21,42 @@ import {
 } from '@/components/nutrition/NutritionProvider';
 import {
   EXPRESS_ROUTINES,
-  STATS,
   TIPS,
   TODAY_ROUTINE,
   TRAINER,
   greeting,
 } from '@/components/dashboard/constants';
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Sign-prefixed value for a delta stat (+2, −3, 0). */
+function formatDelta(value: number): string {
+  if (value > 0) return `+${value}`;
+  if (value < 0) return `−${Math.abs(value)}`;
+  return '0';
+}
+
 /** Student home / dashboard. */
 export default function Dashboard() {
   const router = useRouter();
-  const { studentId, profile } = useAuth();
+  const { studentId, profile, student } = useAuth();
   const { session } = useActiveSession(studentId);
   const { plan } = useNutritionPlan();
+  const { completedSessions, weightDeltaKg } = useTrainingStats(studentId);
 
   const completedSets =
     session?.set_logs.filter((log) => log.completed).length ?? 0;
   const totalSets = session?.set_logs.length ?? 0;
+
+  const weeksTraining = student
+    ? Math.floor((Date.now() - new Date(student.created_at).getTime()) / WEEK_MS)
+    : null;
+
+  const stats = [
+    { label: 'en entrenamiento', value: weeksTraining != null ? String(weeksTraining) : '…', sup: 'sem', accent: false },
+    { label: 'sesiones completadas', value: completedSessions != null ? String(completedSessions) : '…', sup: undefined, accent: true },
+    { label: 'desde el inicio', value: weightDeltaKg != null ? formatDelta(weightDeltaKg) : '…', sup: 'kg', accent: false },
+  ] as const;
 
   return (
     <Screen flush scroll contentStyle={styles.content}>
@@ -61,7 +81,7 @@ export default function Dashboard() {
       </View>
 
       <View style={[styles.block, styles.stats]}>
-        {STATS.map((s) => (
+        {stats.map((s) => (
           <StatCard
             key={s.label}
             value={s.value}
@@ -95,7 +115,7 @@ export default function Dashboard() {
         </View>
       </View>
 
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <View style={styles.block}>
           <SectionHeader
             title="Rutinas exprés"
@@ -103,7 +123,7 @@ export default function Dashboard() {
             onAction={() => router.push('/student/routines')}
           />
         </View>
-        {/* <ScrollView
+        <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.rail}
@@ -120,8 +140,8 @@ export default function Dashboard() {
               onPress={() => router.push('/student/routines')}
             />
           ))}
-        </ScrollView> */}
-      </View>
+        </ScrollView>
+      </View> */}
 
       {/* <View style={[styles.block, styles.section]}>
         <SectionHeader title="Seguimiento" />
@@ -201,7 +221,7 @@ export default function Dashboard() {
         </ScrollView>
       </View>
 
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <View style={styles.block}>
           <SectionHeader
             title="Tips de tu entrenador"
@@ -226,7 +246,7 @@ export default function Dashboard() {
             />
           ))}
         </ScrollView>
-      </View>
+      </View> */}
     </Screen>
   );
 }

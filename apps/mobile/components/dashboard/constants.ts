@@ -29,12 +29,6 @@ export const TRAINER = {
   initials: 'CM',
 } as const;
 
-export const STATS = [
-  { value: '12', sup: 'sem', label: 'en entrenamiento', accent: false },
-  { value: '38', sup: undefined, label: 'sesiones completadas', accent: true },
-  { value: '−3', sup: 'kg', label: 'desde el inicio', accent: false },
-] as const;
-
 export const TODAY_ROUTINE = {
   day: 'Lunes · Día A',
   name: 'EMPUJE +\nHOMBROS',
