@@ -19,6 +19,7 @@ import type {
   DayKey,
   Diet,
   DietMeal,
+  DietMealOption,
   EquipmentOption,
   GoalKey,
   Hue,
@@ -32,6 +33,7 @@ import type {
   NewRecipePayload,
   NewStudentPayload,
   Recipe,
+  RecipeIngredient,
   Routine,
   Student,
 } from "./types";
@@ -461,6 +463,22 @@ const MEAL_CATEGORY_HUE: Record<MealCategory, HueKey> = {
   Snacks: "blue",
 };
 
+/* Shapes a recipe_items/meal_recipe_items row (both share food/qty_value/unit)
+   into the UI's ingredient shape, falling back to "gr" for unrecognized units
+   instead of dropping the line. Shared by recipeFromDb (catalog recipes) and
+   dietFromDb (per-student meal option portions). */
+function itemsToIngredients(
+  items: Array<{ food: string; qty_value?: number; unit?: string }>,
+): RecipeIngredient[] {
+  return items.map((item) => ({
+    name: item.food,
+    qty: item.qty_value ?? 0,
+    unit: (INGREDIENT_UNITS as string[]).includes(item.unit ?? "")
+      ? (item.unit as IngredientUnit)
+      : "gr",
+  }));
+}
+
 /* Shapes a DB recipes row (with template items) for the Dietas screen and
    diet builder. Rows whose meal category falls outside the app's buckets
    land in Snacks instead of vanishing from the grouped UI. */
@@ -480,13 +498,7 @@ export function recipeFromDb(row: RecipeWithItems): Recipe {
     tag: meal,
     meal,
     imageUrl: row.image_url ?? undefined,
-    ingredients: row.recipe_items.map((item) => ({
-      name: item.food,
-      qty: item.qty_value ?? 0,
-      unit: (INGREDIENT_UNITS as string[]).includes(item.unit ?? "")
-        ? (item.unit as IngredientUnit)
-        : "gr",
-    })),
+    ingredients: itemsToIngredients(row.recipe_items),
   };
 }
 
@@ -541,9 +553,25 @@ export const MEAL_SLOT_META: Record<
 /* Fallback daily targets while a plan (or its targets) doesn't exist yet. */
 export const DEFAULT_DIET_TARGET = { kcal: 2100, p: 150 } as const;
 
-/* Shapes a DB nutrition plan for the trainer UI: plan meals map onto the four
-   UI slots by position; each slot holds the trainer's recipe options (ordered)
-   and the student's selected one, falling back to the first option. */
+/* Which recipe catalog category each UI meal slot draws its "add option"
+   suggestions from by default (e.g. only Almuerzo recipes for the Comida
+   slot). Names differ (UI slots use the day's Spanish meal names; the
+   catalog's meal categories use "Almuerzo"/"Snacks") so this isn't 1:1. */
+export const SLOT_TO_MEAL_CATEGORY: Record<MealSlot, MealCategory> = {
+  Desayuno: "Desayuno",
+  Comida: "Almuerzo",
+  Cena: "Cena",
+  Snack: "Snacks",
+};
+
+/* Shapes a DB nutrition plan for the trainer UI: each meal row carries its
+   own slot name (set at save time), so slots map onto the UI by that name —
+   NOT by array position. Rows are skipped entirely when they have no recipe
+   options (see useDiet.ts's save()), so `plan.meals` is compacted rather
+   than sparse; assuming position === slot order would misalign every slot
+   after the first gap. Each slot holds the trainer's recipe options
+   (ordered, each with its per-student ingredient portions) and the
+   student's selected one, falling back to the first option. */
 export function dietFromDb(plan: NutritionPlan): Diet {
   const meals: Record<MealSlot, DietMeal> = {
     Desayuno: { options: [], selected: null },
@@ -551,13 +579,18 @@ export function dietFromDb(plan: NutritionPlan): Diet {
     Cena: { options: [], selected: null },
     Snack: { options: [], selected: null },
   };
-  plan.meals.forEach((meal, index) => {
-    const slot = MEAL_SLOTS[index];
-    if (!slot) return;
-    const options = meal.meal_recipes.map((option) => option.recipe_id);
+  plan.meals.forEach((meal) => {
+    const slot = (MEAL_SLOTS as string[]).includes(meal.name)
+      ? (meal.name as MealSlot)
+      : undefined;
+    if (!slot) return; // unrecognized/legacy row — skip rather than guess
+    const options: DietMealOption[] = meal.meal_recipes.map((option) => ({
+      recipeId: option.recipe_id,
+      ingredients: itemsToIngredients(option.meal_recipe_items),
+    }));
     meals[slot] = {
       options,
-      selected: meal.selected_recipe_id ?? options[0] ?? null,
+      selected: meal.selected_recipe_id ?? options[0]?.recipeId ?? null,
     };
   });
   return {

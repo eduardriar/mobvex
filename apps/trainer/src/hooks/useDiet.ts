@@ -4,9 +4,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getNutritionPlan, getSession, saveNutritionPlan } from "@mobvex/db";
-import { dietFromDb, MEAL_SLOT_META, MEAL_SLOTS } from "@/lib/data";
+import { dietFromDb, macrosFor, MEAL_SLOT_META, MEAL_SLOTS } from "@/lib/data";
 import { COPY } from "@/lib/copy";
-import type { Diet, MealSlot } from "@/lib/types";
+import type { Diet, DietMealOption, MealSlot } from "@/lib/types";
 
 export function useDiet(studentId: string) {
   const [diet, setDiet] = useState<Diet | null>(null);
@@ -33,14 +33,15 @@ export function useDiet(studentId: string) {
   }, [load]);
 
   /* Persists the built plan as the student's active one. Each slot carries
-     the recipe options the student can pick between (first = default); empty
-     slots are skipped. Returns null on success or a user-facing Spanish
-     error. */
+     the recipe options the student can pick between (first = default), each
+     with its own per-student ingredient portions (macros recomputed from
+     current quantities); empty slots are skipped. Returns null on success or
+     a user-facing Spanish error. */
   const save = useCallback(
     async (plan: {
       name: string;
       target: { kcal: number; p: number };
-      meals: Record<MealSlot, string[]>;
+      meals: Record<MealSlot, DietMealOption[]>;
     }): Promise<string | null> => {
       const {
         data: { session },
@@ -49,10 +50,39 @@ export function useDiet(studentId: string) {
       if (sessionError || !session) return COPY.common.sessionExpired;
 
       const meals = MEAL_SLOTS.flatMap((slot) => {
-        const recipeIds = plan.meals[slot];
-        return recipeIds.length > 0
-          ? [{ name: slot, ...MEAL_SLOT_META[slot], recipeIds }]
-          : [];
+        const options = plan.meals[slot];
+        if (options.length === 0) return [];
+        return [
+          {
+            name: slot,
+            ...MEAL_SLOT_META[slot],
+            options: options.map((option) => {
+              const macros = option.ingredients.reduce(
+                (acc, ing) => {
+                  const m = macrosFor(ing.name, ing.qty, ing.unit);
+                  return {
+                    kcal: acc.kcal + m.kcal,
+                    p: acc.p + m.p,
+                    c: acc.c + m.c,
+                    f: acc.f + m.f,
+                  };
+                },
+                { kcal: 0, p: 0, c: 0, f: 0 },
+              );
+              return {
+                recipeId: option.recipeId,
+                macros,
+                items: option.ingredients.map((ing, index) => ({
+                  food: ing.name,
+                  qty: `${ing.qty} ${ing.unit}`,
+                  qty_value: ing.qty,
+                  unit: ing.unit,
+                  order: index,
+                })),
+              };
+            }),
+          },
+        ];
       });
 
       const { error: saveError } = await saveNutritionPlan({

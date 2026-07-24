@@ -260,15 +260,14 @@ export function ExerciseForm({
 
       <div className="mt-[22px] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {onDelete ? (
-          <Button
-            variant="ghost"
+          <button
+            type="button"
             onClick={onDelete}
-            className="whitespace-nowrap"
-            style={{ color: "var(--color-accent-2)" }}
-            leadingIcon={<Icon name="trash" size={16} />}
+            title={T.form.delete}
+            className="flex w-fit cursor-pointer items-center p-1.5 text-accent-2 hover:opacity-80"
           >
-            {T.form.delete}
-          </Button>
+            <Icon name="trash" size={18} />
+          </button>
         ) : (
           <span />
         )}

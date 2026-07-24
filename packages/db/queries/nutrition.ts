@@ -8,7 +8,6 @@ import type {
   NewMealRecipeItem,
   Nutrition,
   NutritionPlan,
-  RecipeWithItems,
 } from '../types';
 
 const PLAN_SELECT =
@@ -49,6 +48,17 @@ export async function setMealSelection(mealId: string, recipeId: string) {
 }
 
 /**
+ * One recipe option for a meal slot: its per-student portion — ingredient
+ * quantities and the macros they add up to, both editable by the trainer
+ * from the catalog recipe's defaults.
+ */
+export type PlanMealOptionInput = {
+  recipeId: string;
+  macros: { kcal: number; p: number; c: number; f: number };
+  items: NewMealRecipeItemLine[];
+};
+
+/**
  * One meal slot for saveNutritionPlan: presentation plus the recipe options
  * the student can pick between (ordered; the first is the default selection).
  */
@@ -57,7 +67,7 @@ export type PlanMealInput = {
   time: string;
   icon: MealIcon;
   hue: MealHue;
-  recipeIds: string[];
+  options: PlanMealOptionInput[];
 };
 
 /**
@@ -97,7 +107,7 @@ export async function saveNutritionPlan(input: {
     .single<Nutrition>();
   if (planError) return { data: null, error: planError };
 
-  const meals = input.meals.filter((meal) => meal.recipeIds.length > 0);
+  const meals = input.meals.filter((meal) => meal.options.length > 0);
   for (const [index, meal] of meals.entries()) {
     const { data: createdMeal, error: mealError } = await supabase
       .from('meals')
@@ -108,7 +118,7 @@ export async function saveNutritionPlan(input: {
         icon: meal.icon,
         hue: meal.hue,
         order: index,
-        selected_recipe_id: meal.recipeIds[0],
+        selected_recipe_id: meal.options[0]?.recipeId,
       })
       .select()
       .single<Meal>();
@@ -117,11 +127,13 @@ export async function saveNutritionPlan(input: {
       return { data: null, error: mealError };
     }
 
-    for (const [optionIndex, recipeId] of meal.recipeIds.entries()) {
+    for (const [optionIndex, option] of meal.options.entries()) {
       const { error: attachError } = await attachRecipeToMeal(
         createdMeal.id,
-        recipeId,
+        option.recipeId,
         optionIndex,
+        option.macros,
+        option.items,
       );
       if (attachError) {
         await supabase.from('nutrition').delete().eq('id', plan.id);
@@ -134,49 +146,38 @@ export async function saveNutritionPlan(input: {
 }
 
 /**
- * Attach a recipe to a meal as a new option, copying the recipe's macros and
- * food items as the assignment's per-student defaults. Like createRecipe, if
- * the items insert fails the assignment row is removed so no half-copied
+ * Attach a recipe to a meal as a new option. `macros`/`items` are the
+ * assignment's per-student portion — the caller seeds them from the catalog
+ * recipe's defaults when first adding the option, and passes the (possibly
+ * trainer-edited) current values on every subsequent save. Like createRecipe,
+ * if the items insert fails the assignment row is removed so no half-written
  * option is left behind.
  */
 export async function attachRecipeToMeal(
   mealId: string,
   recipeId: string,
   order: number,
+  macros: { kcal: number; p: number; c: number; f: number },
+  items: NewMealRecipeItemLine[],
 ) {
-  const { data: recipe, error: recipeError } = await supabase
-    .from('recipes')
-    .select('*, recipe_items(*)')
-    .eq('id', recipeId)
-    .order('order', { referencedTable: 'recipe_items', ascending: true })
-    .single<RecipeWithItems>();
-  if (recipeError) return { data: null, error: recipeError };
-
   const { data, error } = await supabase
     .from('meal_recipes')
     .insert({
       meal_id: mealId,
       recipe_id: recipeId,
       order,
-      kcal: recipe.kcal,
-      protein_g: recipe.protein_g,
-      carbs_g: recipe.carbs_g,
-      fat_g: recipe.fat_g,
+      kcal: Math.round(macros.kcal),
+      protein_g: Math.round(macros.p),
+      carbs_g: Math.round(macros.c),
+      fat_g: Math.round(macros.f),
     })
     .select()
     .single<MealRecipe>();
   if (error) return { data: null, error };
 
-  const { error: itemsError } = await supabase.from('meal_recipe_items').insert(
-    recipe.recipe_items.map((item) => ({
-      meal_recipe_id: data.id,
-      food: item.food,
-      qty: item.qty,
-      qty_value: item.qty_value,
-      unit: item.unit,
-      order: item.order,
-    })),
-  );
+  const { error: itemsError } = await supabase
+    .from('meal_recipe_items')
+    .insert(items.map((item) => ({ ...item, meal_recipe_id: data.id })));
   if (itemsError) {
     await supabase.from('meal_recipes').delete().eq('id', data.id);
     return { data: null, error: itemsError };

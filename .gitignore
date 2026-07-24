@@ -37,3 +37,6 @@ yarn-error.log*
 .DS_Store
 *.pem
 .env*
+
+# Local-only: test account credentials, never commit
+docs/test-users.md

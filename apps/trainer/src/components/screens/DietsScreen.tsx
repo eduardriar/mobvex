@@ -55,7 +55,7 @@ export function DietsScreen() {
   return (
     <div className="flex-1 overflow-y-auto px-8 pb-12 pt-[26px]">
       {/* header action */}
-      <div className="mb-[22px] flex items-center justify-between">
+      <div className="mb-[22px] flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <span className="font-body text-[14px] text-muted">
           {T.repositoryCount(recipes.length)}
         </span>
@@ -89,7 +89,7 @@ export function DietsScreen() {
                 </Text>
                 <Badge className="ml-auto">{T.groupCount(items.length)}</Badge>
               </div>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="flex flex-col gap-4 sm:grid sm:grid-cols-3">
                 {items.map((recipe) => (
                   <RecipeTile key={recipe.id} recipe={recipe} />
                 ))}

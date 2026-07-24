@@ -1,5 +1,9 @@
 /* Mobvex Trainer — Diet builder (comidas del día con recetas Mobvex), backed
-   by the DB: loads the student's active plan and saves the built one. */
+   by the DB: loads the student's active plan and saves the built one. Each
+   meal slot holds one or more recipe options (equivalents the student picks
+   between); each option's ingredient quantities are a per-student portion
+   the trainer can edit, and new options default to recipes from the slot's
+   own meal category. */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -15,14 +19,16 @@ import { useRecipes } from "@/hooks/useRecipes";
 import {
   DEFAULT_DIET_TARGET,
   HUE,
+  macrosFor,
   MEAL_CATEGORIES,
   MEAL_SLOTS,
+  SLOT_TO_MEAL_CATEGORY,
   STUDENTS,
   studentById,
 } from "@/lib/data";
 import { cn } from "@/lib/cn";
 import { COPY } from "@/lib/copy";
-import type { MealSlot } from "@/lib/types";
+import type { DietMealOption, MealSlot, Macros } from "@/lib/types";
 
 const T = COPY.dietBuilder;
 
@@ -30,12 +36,18 @@ type Props = {
   studentId: string;
 };
 
-const emptyMeals = (): Record<MealSlot, string[]> => ({
+const emptyMeals = (): Record<MealSlot, DietMealOption[]> => ({
   Desayuno: [],
   Comida: [],
   Cena: [],
   Snack: [],
 });
+
+const ZERO_MACROS: Macros = { kcal: 0, p: 0, c: 0, f: 0 };
+
+function sumMacros(a: Macros, b: Macros): Macros {
+  return { kcal: a.kcal + b.kcal, p: a.p + b.p, c: a.c + b.c, f: a.f + b.f };
+}
 
 export function DietBuilder({ studentId }: Props) {
   const s = studentById(studentId) ?? STUDENTS[0]!;
@@ -43,22 +55,30 @@ export function DietBuilder({ studentId }: Props) {
   const { diet, loading: dietLoading, error: dietError, save } = useDiet(s.id);
 
   const [name, setName] = useState("");
-  const [meals, setMeals] = useState<Record<MealSlot, string[]>>(emptyMeals);
+  const [meals, setMeals] = useState<Record<MealSlot, DietMealOption[]>>(emptyMeals);
   const [initialized, setInitialized] = useState(false);
   const [picking, setPicking] = useState<MealSlot | null>(null);
   const [filter, setFilter] = useState<string>(T.filterAll);
+  const [editingSlot, setEditingSlot] = useState<MealSlot | null>(null);
+  const [editingRecipeId, setEditingRecipeId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Seed the editable state once from the student's active plan (or a fresh
-  // one when none exists yet).
+  // one when none exists yet). Deep-clone so edits never mutate the loaded
+  // diet reference directly.
   useEffect(() => {
     if (dietLoading || initialized) return;
     setName(diet?.name ?? T.defaultPlanName);
     const seeded = emptyMeals();
     if (diet) {
-      for (const slot of MEAL_SLOTS) seeded[slot] = [...diet.meals[slot].options];
+      for (const slot of MEAL_SLOTS) {
+        seeded[slot] = diet.meals[slot].options.map((option) => ({
+          recipeId: option.recipeId,
+          ingredients: option.ingredients.map((ing) => ({ ...ing })),
+        }));
+      }
     }
     setMeals(seeded);
     setInitialized(true);
@@ -68,31 +88,99 @@ export function DietBuilder({ studentId }: Props) {
   const recipeById = (id: string | null) =>
     id ? recipes.find((r) => r.id === id) : undefined;
 
+  // An option's live macros come from its current ingredient quantities, not
+  // the catalog recipe's static totals — they diverge once the trainer edits
+  // portions. Falls back to the recipe's own totals only if it has no
+  // ingredients on record at all.
+  const macrosForOption = (option: DietMealOption): Macros => {
+    if (option.ingredients.length === 0) {
+      const r = recipeById(option.recipeId);
+      return r ? { kcal: r.kcal, p: r.p, c: r.c, f: r.f } : ZERO_MACROS;
+    }
+    return option.ingredients.reduce(
+      (acc, ing) => sumMacros(acc, macrosFor(ing.name, ing.qty, ing.unit)),
+      ZERO_MACROS,
+    );
+  };
+
   // Daily totals count only each slot's default (first) option — the extra
   // options are equivalents the student picks between, not additional food.
-  const totals = MEAL_SLOTS.reduce(
-    (acc, slot) => {
-      const r = recipeById(meals[slot][0] ?? null);
-      if (r) {
-        acc.kcal += r.kcal;
-        acc.p += r.p;
-        acc.c += r.c;
-        acc.f += r.f;
-      }
-      return acc;
-    },
-    { kcal: 0, p: 0, c: 0, f: 0 },
-  );
+  const totals = MEAL_SLOTS.reduce((acc, slot) => {
+    const first = meals[slot][0];
+    return first ? sumMacros(acc, macrosForOption(first)) : acc;
+  }, ZERO_MACROS);
+  const roundedTotals = {
+    kcal: Math.round(totals.kcal),
+    p: Math.round(totals.p),
+    c: Math.round(totals.c),
+    f: Math.round(totals.f),
+  };
 
-  const addOption = (slot: MealSlot, id: string) => {
-    setMeals((m) =>
-      m[slot].includes(id) ? m : { ...m, [slot]: [...m[slot], id] },
-    );
-    setSaved(false);
+  const openPicker = (slot: MealSlot) => {
+    setPicking(slot);
+    setFilter(SLOT_TO_MEAL_CATEGORY[slot]);
+    setEditingSlot(null);
+    setEditingRecipeId(null);
+  };
+  const openEditOption = (slot: MealSlot, recipeId: string) => {
+    setEditingSlot(slot);
+    setEditingRecipeId(recipeId);
     setPicking(null);
   };
-  const removeOption = (slot: MealSlot, id: string) => {
-    setMeals((m) => ({ ...m, [slot]: m[slot].filter((r) => r !== id) }));
+  const closeRightPanel = () => {
+    setPicking(null);
+    setEditingSlot(null);
+    setEditingRecipeId(null);
+  };
+
+  const pickRecipe = (slot: MealSlot, recipeId: string) => {
+    setMeals((m) => {
+      if (m[slot].some((o) => o.recipeId === recipeId)) return m;
+      const r = recipeById(recipeId);
+      const option: DietMealOption = {
+        recipeId,
+        ingredients: (r?.ingredients ?? []).map((ing) => ({ ...ing })),
+      };
+      return { ...m, [slot]: [...m[slot], option] };
+    });
+    setSaved(false);
+    // Jump straight into editing the just-added option's portions.
+    setPicking(null);
+    setEditingSlot(slot);
+    setEditingRecipeId(recipeId);
+  };
+
+  const removeOption = (slot: MealSlot, recipeId: string) => {
+    setMeals((m) => ({
+      ...m,
+      [slot]: m[slot].filter((o) => o.recipeId !== recipeId),
+    }));
+    setSaved(false);
+    if (editingSlot === slot && editingRecipeId === recipeId) {
+      setEditingSlot(null);
+      setEditingRecipeId(null);
+    }
+  };
+
+  const setIngredientQty = (
+    slot: MealSlot,
+    recipeId: string,
+    index: number,
+    qty: number,
+  ) => {
+    setMeals((m) => ({
+      ...m,
+      [slot]: m[slot].map((o) =>
+        o.recipeId === recipeId
+          ? {
+              ...o,
+              ingredients: o.ingredients.map((ing, i) =>
+                i === index ? { ...ing, qty } : ing,
+              ),
+            }
+          : o,
+      ),
+    }));
     setSaved(false);
   };
 
@@ -123,6 +211,12 @@ export function DietBuilder({ studentId }: Props) {
     );
   }
 
+  const editingOption =
+    editingSlot && editingRecipeId
+      ? meals[editingSlot].find((o) => o.recipeId === editingRecipeId)
+      : undefined;
+  const editingRecipe = editingOption ? recipeById(editingOption.recipeId) : undefined;
+
   return (
     <div className="flex-1 overflow-y-auto px-8 pb-12 pt-[26px]">
       {/* meta row */}
@@ -134,8 +228,8 @@ export function DietBuilder({ studentId }: Props) {
           containerClassName="w-[320px]"
         />
         <div className="flex gap-[22px] pb-1">
-          <DietMeta value={`${totals.kcal}`} label={T.kcalPerDay} />
-          <DietMeta value={`${totals.p}g`} label={T.proteinMeta} />
+          <DietMeta value={`${roundedTotals.kcal}`} label={T.kcalPerDay} />
+          <DietMeta value={`${roundedTotals.p}g`} label={T.proteinMeta} />
         </div>
         <div className="ml-auto flex items-center gap-3 pb-0.5">
           {saveError && (
@@ -165,8 +259,8 @@ export function DietBuilder({ studentId }: Props) {
         <div className="flex flex-col gap-3.5">
           {MEAL_SLOTS.map((slot) => {
             const options = meals[slot]
-              .map((id) => recipeById(id))
-              .filter((r) => r !== undefined);
+              .map((option) => ({ option, recipe: recipeById(option.recipeId) }))
+              .filter((o) => o.recipe !== undefined);
             return (
               <Card key={slot} style={{ padding: 18 }}>
                 <div
@@ -181,15 +275,17 @@ export function DietBuilder({ studentId }: Props) {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setPicking(slot)}
+                    onClick={() => openPicker(slot)}
                     leadingIcon={<Icon name="plus" size={15} />}
                   >
                     {options.length > 0 ? T.addOption : T.chooseRecipe}
                   </Button>
                 </div>
                 <div className="flex flex-col gap-3.5">
-                  {options.map((r, optionIndex) => {
+                  {options.map(({ option, recipe: r }, optionIndex) => {
+                    if (!r) return null;
                     const h = HUE[r.cat];
+                    const m = macrosForOption(option);
                     return (
                       <div key={r.id} className="flex items-center gap-3.5">
                         <div
@@ -211,16 +307,19 @@ export function DietBuilder({ studentId }: Props) {
                           </div>
                           <div className="mt-1.5 flex flex-wrap gap-3 font-body text-[12px] text-muted">
                             <span>
-                              {r.kcal} {T.kcalUnit}
+                              {Math.round(m.kcal)} {T.kcalUnit}
                             </span>
-                            <span>{T.proteinShort(r.p)}</span>
-                            <span>{T.carbsShort(r.c)}</span>
-                            <span className="inline-flex items-center gap-1">
-                              <Icon name="clock" size={13} />{" "}
-                              {T.minBadge(r.time)}
-                            </span>
+                            <span>{T.proteinShort(Math.round(m.p))}</span>
+                            <span>{T.carbsShort(Math.round(m.c))}</span>
                           </div>
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => openEditOption(slot, r.id)}
+                          className="inline-flex shrink-0 cursor-pointer items-center gap-[5px] rounded-full border border-border bg-transparent px-[11px] py-1.5 font-body text-[12px] text-muted hover:border-text hover:text-text"
+                        >
+                          <Icon name="edit" size={13} /> {T.editQuantities}
+                        </button>
                         <button
                           type="button"
                           title={T.removeRecipe}
@@ -238,14 +337,88 @@ export function DietBuilder({ studentId }: Props) {
           })}
         </div>
 
-        {/* right: summary OR picker */}
-        {picking ? (
+        {/* right: summary, browse-to-add, or edit-ingredients */}
+        {editingSlot && editingOption && editingRecipe ? (
+          <Card style={{ padding: 20 }}>
+            <div className="mb-3.5 flex items-center justify-between">
+              <Text variant="cardName">{editingRecipe.name}</Text>
+              <button
+                type="button"
+                onClick={closeRightPanel}
+                className="flex cursor-pointer border-none bg-transparent text-muted hover:text-text"
+              >
+                <Icon name="x" size={20} />
+              </button>
+            </div>
+
+            <div className="mb-2.5 font-body text-[11px] uppercase tracking-[1px] text-muted">
+              {T.ingredientsLabel}
+            </div>
+            <div className="mb-4 flex flex-col gap-2">
+              {editingOption.ingredients.length === 0 ? (
+                <div className="font-body text-[13px] text-muted">
+                  {T.noIngredients}
+                </div>
+              ) : (
+                editingOption.ingredients.map((ing, i) => (
+                  <div
+                    key={`${ing.name}-${i}`}
+                    className="flex items-center gap-2.5 rounded-input border border-border bg-surface px-3 py-2.5"
+                  >
+                    <span className="flex-1 truncate font-body text-[13px] text-text">
+                      {ing.name}
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={ing.qty}
+                      onChange={(e) =>
+                        setIngredientQty(
+                          editingSlot,
+                          editingOption.recipeId,
+                          i,
+                          parseFloat(e.target.value) || 0,
+                        )
+                      }
+                      className="w-16 rounded-input border border-border bg-surface-2 px-2 py-1.5 text-center font-body text-[13px] text-text outline-none focus:border-accent"
+                    />
+                    <span className="w-7 font-body text-[12px] text-muted">
+                      {ing.unit}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mb-[18px] grid grid-cols-4 gap-2">
+              {(() => {
+                const m = macrosForOption(editingOption);
+                return [
+                  [T.calories, m.kcal],
+                  [T.protein, m.p],
+                  [T.carbs, m.c],
+                  [T.fat, m.f],
+                ] as const;
+              })().map(([label, value]) => (
+                <div
+                  key={label}
+                  className="rounded-input border border-border bg-surface px-1 py-2.5 text-center"
+                >
+                  <div className="font-display text-[18px] text-accent">
+                    {Math.round(value)}
+                  </div>
+                  <div className="font-body text-[10px] text-muted">{label}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        ) : picking ? (
           <Card style={{ padding: 20 }}>
             <div className="mb-3.5 flex items-center justify-between">
               <Text variant="cardName">{T.chooseFor(picking)}</Text>
               <button
                 type="button"
-                onClick={() => setPicking(null)}
+                onClick={closeRightPanel}
                 className="flex cursor-pointer border-none bg-transparent text-muted hover:text-text"
               >
                 <Icon name="x" size={20} />
@@ -275,7 +448,7 @@ export function DietBuilder({ studentId }: Props) {
                   <button
                     key={r.id}
                     type="button"
-                    onClick={() => addOption(picking, r.id)}
+                    onClick={() => pickRecipe(picking, r.id)}
                     className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-surface p-3 text-left hover:border-accent-card-border"
                   >
                     <div
@@ -304,6 +477,11 @@ export function DietBuilder({ studentId }: Props) {
                   </button>
                 );
               })}
+              {filtered.length === 0 && (
+                <div className="font-body text-[13px] text-muted">
+                  {T.noRecipesInCategory}
+                </div>
+              )}
             </div>
           </Card>
         ) : (
@@ -317,13 +495,13 @@ export function DietBuilder({ studentId }: Props) {
 
             <Goal
               label={T.calories}
-              value={totals.kcal}
+              value={roundedTotals.kcal}
               target={target.kcal}
               unit={T.kcalUnit}
             />
             <Goal
               label={T.protein}
-              value={totals.p}
+              value={roundedTotals.p}
               target={target.p}
               unit={COPY.diets.form.macros.gramsUnit}
             />
@@ -331,9 +509,9 @@ export function DietBuilder({ studentId }: Props) {
             <div className="my-5 h-px bg-border" />
 
             <div className="grid grid-cols-3 gap-3">
-              <Macro label={T.protein} value={totals.p} />
-              <Macro label={T.carbs} value={totals.c} />
-              <Macro label={T.fat} value={totals.f} />
+              <Macro label={T.protein} value={roundedTotals.p} />
+              <Macro label={T.carbs} value={roundedTotals.c} />
+              <Macro label={T.fat} value={roundedTotals.f} />
             </div>
             <div className="mt-5 flex gap-2.5">
               <Badge>
@@ -344,7 +522,9 @@ export function DietBuilder({ studentId }: Props) {
               </Badge>
               <Badge>
                 {T.proteinPct(
-                  Math.round(((totals.p * 4) / Math.max(totals.kcal, 1)) * 100),
+                  Math.round(
+                    ((roundedTotals.p * 4) / Math.max(roundedTotals.kcal, 1)) * 100,
+                  ),
                 )}
               </Badge>
             </div>
