@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, Text, colors, initials, spacing } from '@mobvex/ui';
@@ -6,6 +7,7 @@ import { useActiveSession } from '@/hooks/useActiveSession';
 import { useTrainingStats } from '@/hooks/useTrainingStats';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { ProfileMenu } from '@/components/dashboard/ProfileMenu';
 import { TrainerStrip } from '@/components/dashboard/TrainerStrip';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SectionHeader } from '@/components/dashboard/SectionHeader';
@@ -43,6 +45,7 @@ export default function Dashboard() {
   const { session } = useActiveSession(studentId);
   const { plan } = useNutritionPlan();
   const { completedSessions, weightDeltaKg } = useTrainingStats(studentId);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const completedSets =
     session?.set_logs.filter((log) => log.completed).length ?? 0;
@@ -68,6 +71,7 @@ export default function Dashboard() {
           hasUnread
           // TODO: route to a notifications screen once it exists.
           onNotifications={undefined}
+          onProfilePress={() => setProfileOpen(true)}
         />
       </View>
 
@@ -247,6 +251,13 @@ export default function Dashboard() {
           ))}
         </ScrollView>
       </View> */}
+
+      <ProfileMenu
+        visible={profileOpen}
+        student={{ name: profile?.name ?? '' }}
+        trainer={{ name: TRAINER.name }}
+        onClose={() => setProfileOpen(false)}
+      />
     </Screen>
   );
 }

@@ -4,7 +4,6 @@ import { useRouter } from 'expo-router';
 import {
   Alert,
   Avatar,
-  Screen,
   Text,
   colors,
   fonts,
@@ -12,6 +11,7 @@ import {
   radius,
   spacing,
 } from '@mobvex/ui';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { MacroBar } from '@/components/nutrition/MacroBar';
 import { MealCard } from '@/components/nutrition/MealCard';
 import { getSelectedMealOption, useNutritionPlan } from '@/components/nutrition/NutritionProvider';
@@ -36,19 +36,10 @@ export default function Nutrition() {
     : 'Tu plan aparecerá aquí.';
 
   return (
-    <Screen scroll contentStyle={styles.content}>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text variant="title" style={styles.title}>
-            {'TU\nDIETA'}
-          </Text>
-          <Text variant="subtitle" style={styles.subtitle}>
-            {subtitle}
-          </Text>
-        </View>
-        <Avatar name={TRAINER_NAME} />
-      </View>
-
+    <ScreenHeader
+      title={'TU DIETA'}
+      subtitle={subtitle}
+    >
       {loading ? (
         <ActivityIndicator color={colors.accent} style={styles.feedback} />
       ) : error ? (
@@ -107,30 +98,11 @@ export default function Nutrition() {
           </View>
         </>
       )}
-    </Screen>
+    </ScreenHeader>
   );
 }
 
 const styles = StyleSheet.create({
-  content: {
-    paddingTop: spacing.xl,
-    paddingBottom: spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  headerText: {
-    flex: 1,
-  },
-  title: {
-    lineHeight: 36,
-  },
-  subtitle: {
-    marginTop: spacing.xs,
-  },
   feedback: {
     marginTop: spacing.xl,
   },

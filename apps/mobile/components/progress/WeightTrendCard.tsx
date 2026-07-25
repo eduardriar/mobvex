@@ -2,6 +2,9 @@ import { StyleSheet, View } from 'react-native';
 import { Card, Text, colors, fonts, spacing } from '@mobvex/ui';
 import { Sparkline } from './Sparkline';
 import { TrendBadge } from './TrendBadge';
+import { COPY } from '@/lib/copy';
+
+const T = COPY.progress.weight;
 
 type Props = {
   /** Weight series in chronological order (oldest → newest). */
@@ -21,7 +24,7 @@ export function WeightTrendCard({ weights, current, delta }: Props) {
     <Card>
       <View style={styles.row}>
         <View style={styles.left}>
-          <Text variant="label">PESO ACTUAL</Text>
+          <Text variant="label">{T.currentLabel}</Text>
           {hasCurrent ? (
             <Text style={styles.value}>
               {current}
@@ -42,11 +45,11 @@ export function WeightTrendCard({ weights, current, delta }: Props) {
             <>
               <Sparkline values={weights} width={150} height={64} />
               <Text variant="cardRole" style={styles.caption}>
-                últimas {weights.length} mediciones
+                {T.recentMeasurements(weights.length)}
               </Text>
             </>
           ) : (
-            <Text variant="cardRole">Sin mediciones aún</Text>
+            <Text variant="cardRole">{T.noMeasurementsYet}</Text>
           )}
         </View>
       </View>

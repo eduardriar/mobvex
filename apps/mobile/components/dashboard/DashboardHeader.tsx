@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, colors, fonts, letterSpacing } from '@mobvex/ui';
 import { IconButton } from './IconButton';
 import { SquareAvatar } from './SquareAvatar';
@@ -10,6 +10,7 @@ type Props = {
   initials: string;
   hasUnread?: boolean;
   onNotifications?: () => void;
+  onProfilePress?: () => void;
 };
 
 /** Top greeting row: salutation + name, notifications, avatar. */
@@ -19,6 +20,7 @@ export function DashboardHeader({
   initials,
   hasUnread = false,
   onNotifications,
+  onProfilePress,
 }: Props) {
   return (
     <View style={styles.row}>
@@ -36,7 +38,13 @@ export function DashboardHeader({
         >
           <Feather name="bell" size={16} color={colors.text} />
         </IconButton>
-        <SquareAvatar initials={initials} />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Perfil"
+          onPress={onProfilePress}
+        >
+          <SquareAvatar initials={initials} />
+        </Pressable>
       </View>
     </View>
   );

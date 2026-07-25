@@ -1,7 +1,7 @@
 import { ActivityIndicator, RefreshControl, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Alert, Text, colors, spacing } from '@mobvex/ui';
-import { ComingSoon } from '@/components/dashboard/ComingSoon';
+import { ScreenHeader } from '@/components/ScreenHeader';
 import { RoutineSummaryCard } from '@/components/routines/RoutineSummaryCard';
 import { useAssignedRoutines } from '@/hooks/useAssignedRoutines';
 import { useStartSession } from '@/hooks/useStartSession';
@@ -23,7 +23,7 @@ export default function Routines() {
   };
 
   return (
-    <ComingSoon
+    <ScreenHeader
       title={'TUS\nRUTINAS'}
       subtitle="Semana 8 de 12 · Plan Hipertrofia"
       refreshControl={
@@ -59,7 +59,7 @@ export default function Routines() {
           ))}
         </View>
       )}
-    </ComingSoon>
+    </ScreenHeader>
   );
 }
 
