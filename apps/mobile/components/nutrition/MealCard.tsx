@@ -2,6 +2,9 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { StyleSheet, View } from 'react-native';
 import { Card, Text, categories, colors, fonts } from '@mobvex/ui';
 import type { MealOption, MealWithOptions } from '@mobvex/db';
+import { COPY } from '@/lib/copy';
+
+const T = COPY.nutrition.meals;
 
 /** Category-tinted icon tile for a meal. */
 function MealGlyph({ meal }: { meal: MealWithOptions }) {
@@ -59,10 +62,10 @@ export function MealCard({ meal, option, onPress }: Props) {
 
       <View style={styles.footer}>
         <Text variant="cardRole" style={styles.footerLabel}>
-          {meal.meal_recipes.length} opciones del entrenador
+          {T.trainerOptions(meal.meal_recipes.length)}
         </Text>
         <View style={styles.change}>
-          <Text style={styles.changeText}>Cambiar</Text>
+          <Text style={styles.changeText}>{T.change}</Text>
           <Feather name="chevron-right" size={15} color={colors.accent} />
         </View>
       </View>

@@ -39,4 +39,26 @@ export const COPY = {
       sectionTitle: 'Medidas corporales',
     },
   },
+  nutrition: {
+    title: 'TU DIETA',
+    loadError: 'No pudimos cargar tu dieta.',
+    emptyState: 'Aún no tienes un plan de nutrición asignado.',
+    noPlanSubtitle: 'Tu plan aparecerá aquí.',
+    assignedToday: 'Asignado hoy',
+    assignedYesterday: 'Asignado ayer',
+    assignedDaysAgo: (n: number) => `Asignado hace ${n} días`,
+    dailyTarget: {
+      sectionTitle: 'Objetivo diario',
+      kcalUnit: 'kcal / día',
+      protein: 'Proteína',
+      carbs: 'Carbos',
+      fat: 'Grasas',
+    },
+    meals: {
+      sectionTitle: 'Comidas del día',
+      trainerOptions: (n: number) =>
+        n === 1 ? '1 opción del entrenador' : `${n} opciones del entrenador`,
+      change: 'Cambiar',
+    },
+  },
 } as const;
