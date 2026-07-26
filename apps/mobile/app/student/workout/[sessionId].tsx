@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Alert, Button, Screen, Text, colors, spacing } from '@mobvex/ui';
 import type { SetLogWithExercise } from '@mobvex/db';
+import { CloseableScreenHeader } from '@/components/CloseableScreenHeader';
 import { ProgressBar } from '@/components/dashboard/ProgressBar';
 import { SessionExerciseCard } from '@/components/workout/SessionExerciseCard';
 import { WorkoutClock } from '@/components/workout/WorkoutClock';
@@ -63,24 +63,12 @@ export default function WorkoutSession() {
 
   return (
     <Screen scroll contentStyle={styles.content}>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text variant="label" style={styles.eyebrow}>
-            Rutina en curso
-          </Text>
-          <Text variant="title" style={styles.title}>
-            {session.routine.name}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar rutina"
-          hitSlop={8}
-          onPress={() => router.replace('/student')}
-        >
-          <Feather name="x" size={24} color={colors.muted} />
-        </Pressable>
-      </View>
+      <CloseableScreenHeader
+        eyebrow="Rutina en curso"
+        title={session.routine.name}
+        onClose={() => router.replace('/student')}
+        closeAccessibilityLabel="Cerrar rutina"
+      />
 
       <View style={styles.progress}>
         <ProgressBar progress={progress} />
@@ -125,22 +113,6 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginTop: spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  headerText: {
-    flex: 1,
-  },
-  eyebrow: {
-    color: colors.accent,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    lineHeight: 36,
   },
   progress: {
     marginTop: spacing.lg,

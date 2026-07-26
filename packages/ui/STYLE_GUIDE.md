@@ -50,6 +50,8 @@ Prefer these over solid fills for active/highlight backgrounds and soft borders.
 | `accentGlow` | `rgba(200, 255, 0, 0.06)` | Ambient container glow |
 | `alertBg` | `rgba(255, 77, 109, 0.10)` | Alert background |
 | `alertBorder` | `rgba(255, 77, 109, 0.25)` | Alert border |
+| `mediaScrim` | `rgba(10, 10, 11, 0.35)` | Scrim over a photo/video thumbnail |
+| `backdrop` | `rgba(10, 10, 11, 0.6)` | Full-screen dim behind a modal/drawer |
 
 ### Category hues (`categories`)
 

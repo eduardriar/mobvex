@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Screen, Text, colors, spacing } from '@mobvex/ui';
+import { Screen, Text, colors, initials, spacing } from '@mobvex/ui';
 import { ActiveSessionBar } from '@/components/workout/ActiveSessionBar';
 import { useActiveSession } from '@/hooks/useActiveSession';
+import { useTrainingStats } from '@/hooks/useTrainingStats';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { DashboardHeader } from '@/components/dashboard/DashboardHeader';
+import { ProfileMenu } from '@/components/dashboard/ProfileMenu';
 import { TrainerStrip } from '@/components/dashboard/TrainerStrip';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { SectionHeader } from '@/components/dashboard/SectionHeader';
@@ -15,36 +18,60 @@ import { ProgressBar } from '@/components/dashboard/ProgressBar';
 import { RecipeCard } from '@/components/dashboard/RecipeCard';
 import { TipCard } from '@/components/dashboard/TipCard';
 import {
+  getSelectedMealOption,
+  useNutritionPlan,
+} from '@/components/nutrition/NutritionProvider';
+import {
   EXPRESS_ROUTINES,
-  RECIPES,
-  STATS,
-  STUDENT,
   TIPS,
   TODAY_ROUTINE,
   TRAINER,
   greeting,
 } from '@/components/dashboard/constants';
 
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Sign-prefixed value for a delta stat (+2, −3, 0). */
+function formatDelta(value: number): string {
+  if (value > 0) return `+${value}`;
+  if (value < 0) return `−${Math.abs(value)}`;
+  return '0';
+}
+
 /** Student home / dashboard. */
 export default function Dashboard() {
   const router = useRouter();
-  const { studentId } = useAuth();
+  const { studentId, profile, student } = useAuth();
   const { session } = useActiveSession(studentId);
+  const { plan } = useNutritionPlan();
+  const { completedSessions, weightDeltaKg } = useTrainingStats(studentId);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const completedSets =
     session?.set_logs.filter((log) => log.completed).length ?? 0;
   const totalSets = session?.set_logs.length ?? 0;
+
+  const weeksTraining = student
+    ? Math.floor((Date.now() - new Date(student.created_at).getTime()) / WEEK_MS)
+    : null;
+
+  const stats = [
+    { label: 'en entrenamiento', value: weeksTraining != null ? String(weeksTraining) : '…', sup: 'sem', accent: false },
+    { label: 'sesiones completadas', value: completedSessions != null ? String(completedSessions) : '…', sup: undefined, accent: true },
+    { label: 'desde el inicio', value: weightDeltaKg != null ? formatDelta(weightDeltaKg) : '…', sup: 'kg', accent: false },
+  ] as const;
 
   return (
     <Screen flush scroll contentStyle={styles.content}>
       <View style={styles.header}>
         <DashboardHeader
           greeting={greeting()}
-          name={STUDENT.name}
-          initials={STUDENT.initials}
+          name={profile?.name ?? ''}
+          initials={initials(profile?.name)}
           hasUnread
           // TODO: route to a notifications screen once it exists.
           onNotifications={undefined}
+          onProfilePress={() => setProfileOpen(true)}
         />
       </View>
 
@@ -58,7 +85,7 @@ export default function Dashboard() {
       </View>
 
       <View style={[styles.block, styles.stats]}>
-        {STATS.map((s) => (
+        {stats.map((s) => (
           <StatCard
             key={s.label}
             value={s.value}
@@ -92,7 +119,7 @@ export default function Dashboard() {
         </View>
       </View>
 
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <View style={styles.block}>
           <SectionHeader
             title="Rutinas exprés"
@@ -118,9 +145,9 @@ export default function Dashboard() {
             />
           ))}
         </ScrollView>
-      </View>
+      </View> */}
 
-      <View style={[styles.block, styles.section]}>
+      {/* <View style={[styles.block, styles.section]}>
         <SectionHeader title="Seguimiento" />
         <View style={[styles.sectionBody, styles.trackingGroup]}>
           <TrackingCard
@@ -162,7 +189,7 @@ export default function Dashboard() {
             </View>
           </TrackingCard>
         </View>
-      </View>
+      </View> */}
 
       <View style={styles.section}>
         <View style={styles.block}>
@@ -178,20 +205,27 @@ export default function Dashboard() {
           contentContainerStyle={styles.rail}
           style={styles.sectionBody}
         >
-          {RECIPES.map((r) => (
-            <RecipeCard
-              key={r.id}
-              emoji={r.emoji}
-              hue={r.hue}
-              name={r.name}
-              tags={r.tags}
-              onPress={() => router.push('/student/nutrition')}
-            />
-          ))}
+          {(plan?.meals ?? []).map((meal) => {
+            const option = getSelectedMealOption(meal);
+            if (!option) return null;
+            return (
+              <RecipeCard
+                key={meal.id}
+                emoji={meal.icon === 'droplet' ? '💧' : '🍽️'}
+                hue={meal.hue}
+                name={option.recipe.name}
+                tags={[
+                  `${option.kcal} kcal`,
+                  option.protein_g ? `${option.protein_g}g prot` : null,
+                ].filter((tag): tag is string => Boolean(tag))}
+                onPress={() => router.push(`/student/diet/${meal.id}`)}
+              />
+            );
+          })}
         </ScrollView>
       </View>
 
-      <View style={styles.section}>
+      {/* <View style={styles.section}>
         <View style={styles.block}>
           <SectionHeader
             title="Tips de tu entrenador"
@@ -216,7 +250,14 @@ export default function Dashboard() {
             />
           ))}
         </ScrollView>
-      </View>
+      </View> */}
+
+      <ProfileMenu
+        visible={profileOpen}
+        student={{ name: profile?.name ?? '' }}
+        trainer={{ name: TRAINER.name }}
+        onClose={() => setProfileOpen(false)}
+      />
     </Screen>
   );
 }

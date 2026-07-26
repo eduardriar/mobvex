@@ -45,6 +45,9 @@ export const overlays = {
 
   // Dark scrim (bg #0A0A0B) over a photo/video thumbnail, for icon contrast.
   mediaScrim: 'rgba(10, 10, 11, 0.35)',
+
+  // Full-screen dim (bg #0A0A0B) behind a modal or slide-in drawer.
+  backdrop: 'rgba(10, 10, 11, 0.6)',
 } as const;
 
 /**

@@ -1,6 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, colors, fonts, fontSizes, overlays, radius, spacing } from '@mobvex/ui';
+import { COPY } from '@/lib/copy';
+
+const T = COPY.progress.common;
 
 type Props = {
   title: string;
@@ -14,12 +17,12 @@ export function AddSectionHeader({ title, onAdd }: Props) {
       <Text variant="label">{title}</Text>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`Añadir · ${title}`}
+        accessibilityLabel={T.addAccessibilityLabel(title)}
         onPress={onAdd}
         style={({ pressed }) => [styles.button, pressed ? styles.pressed : null]}
       >
         <Feather name="plus" size={14} color={colors.accent} />
-        <Text style={styles.label}>Añadir</Text>
+        <Text style={styles.label}>{T.add}</Text>
       </Pressable>
     </View>
   );

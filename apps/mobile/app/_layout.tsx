@@ -6,6 +6,7 @@ import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import { DMSans_400Regular } from '@expo-google-fonts/dm-sans';
 import { colors } from '@mobvex/ui';
 import { AuthProvider, useAuth } from '@/components/auth/AuthProvider';
+import { NutritionProvider } from '@/components/nutrition/NutritionProvider';
 
 export default function RootLayout() {
   // Token font families ('BebasNeue', 'DMSans') must match these keys.
@@ -20,7 +21,9 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <RootNavigator />
+      <NutritionProvider>
+        <RootNavigator />
+      </NutritionProvider>
     </AuthProvider>
   );
 }

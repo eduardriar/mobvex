@@ -80,6 +80,15 @@ export async function updateSetLog(
     .single<SetLog>();
 }
 
+/** Count of the student's completed workout sessions (all-time). */
+export async function getCompletedSessionsCount(studentId: string) {
+  return supabase
+    .from('workout_sessions')
+    .select('*', { count: 'exact', head: true })
+    .eq('student_id', studentId)
+    .eq('status', 'completed');
+}
+
 /** Mark a session as completed, stamping the completion time. */
 export async function completeSession(id: string) {
   return supabase

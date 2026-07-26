@@ -1,5 +1,5 @@
-import { ComingSoon } from '@/components/dashboard/ComingSoon';
+import { ScreenHeader } from '@/components/ScreenHeader';
 
 export default function Tips() {
-  return <ComingSoon title={'TIPS DE\nCARLOS'} subtitle="Consejos de tu entrenador." />;
+  return <ScreenHeader title={'TIPS DE\nCARLOS'} subtitle="Consejos de tu entrenador." />;
 }
