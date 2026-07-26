@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert as RNAlert, Pressable, StyleSheet, View } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import { Alert as RNAlert, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -8,11 +7,11 @@ import {
   Button,
   Screen,
   Text,
-  colors,
   spacing,
   type CategoryHue,
 } from '@mobvex/ui';
 import type { PhotoPose } from '@mobvex/db';
+import { CloseableScreenHeader } from '@/components/CloseableScreenHeader';
 import { PhotoCaptureTile } from '@/components/progress/PhotoCaptureTile';
 import { usePhotoSession } from '@/hooks/usePhotoSession';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -113,28 +112,12 @@ export default function NewPhotos() {
 
   return (
     <Screen scroll contentStyle={styles.content}>
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text variant="label" style={styles.eyebrow}>
-            Registro fotográfico
-          </Text>
-          <Text variant="title" style={styles.title}>
-            NUEVAS FOTOS
-          </Text>
-          <View style={styles.dateRow}>
-            <Feather name="calendar" size={14} color={colors.muted} />
-            <Text variant="subtitle">{dateLabel}</Text>
-          </View>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Cerrar"
-          hitSlop={8}
-          onPress={() => router.back()}
-        >
-          <Feather name="x" size={24} color={colors.muted} />
-        </Pressable>
-      </View>
+      <CloseableScreenHeader
+        eyebrow="Registro fotográfico"
+        title="NUEVAS FOTOS"
+        dateLabel={dateLabel}
+        onClose={() => router.back()}
+      />
 
       {error ? (
         <Alert message="No pudimos subir la foto. Inténtalo de nuevo." style={styles.alert} />
@@ -175,28 +158,6 @@ const styles = StyleSheet.create({
   content: {
     paddingTop: spacing.xl,
     paddingBottom: spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  headerText: {
-    flex: 1,
-  },
-  eyebrow: {
-    color: colors.accent,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    lineHeight: 36,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.xs,
   },
   alert: {
     marginTop: spacing.lg,

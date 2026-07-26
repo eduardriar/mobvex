@@ -2,16 +2,15 @@ import { useMemo, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Alert, Button, Screen, Text, colors, spacing } from '@mobvex/ui';
 import { saveProgress, type NewProgress } from '@mobvex/db';
+import { CloseableScreenHeader } from '@/components/CloseableScreenHeader';
 import { MeasurementInputRow } from '@/components/progress/MeasurementInputRow';
 import { useProgress } from '@/hooks/useProgress';
 import { useAuth } from '@/components/auth/AuthProvider';
@@ -108,28 +107,12 @@ export default function NewMeasurement() {
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <View style={styles.headerText}>
-              <Text variant="label" style={styles.eyebrow}>
-                Registro de hoy
-              </Text>
-              <Text variant="title" style={styles.title}>
-                NUEVA MEDICIÓN
-              </Text>
-              <View style={styles.dateRow}>
-                <Feather name="calendar" size={14} color={colors.muted} />
-                <Text variant="subtitle">{dateLabel}</Text>
-              </View>
-            </View>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Cerrar"
-              hitSlop={8}
-              onPress={() => router.back()}
-            >
-              <Feather name="x" size={24} color={colors.muted} />
-            </Pressable>
-          </View>
+          <CloseableScreenHeader
+            eyebrow="Registro de hoy"
+            title="NUEVA MEDICIÓN"
+            dateLabel={dateLabel}
+            onClose={() => router.back()}
+          />
 
           {error ? (
             <Alert message="No pudimos guardar la medición." style={styles.alert} />
@@ -188,28 +171,6 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: colors.border,
     backgroundColor: colors.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  headerText: {
-    flex: 1,
-  },
-  eyebrow: {
-    color: colors.accent,
-    marginBottom: spacing.xs,
-  },
-  title: {
-    lineHeight: 36,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: spacing.xs,
   },
   alert: {
     marginTop: spacing.lg,

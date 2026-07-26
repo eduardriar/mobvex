@@ -3,7 +3,6 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import {
   Alert,
-  Avatar,
   Text,
   colors,
   fonts,
@@ -15,9 +14,6 @@ import { ScreenHeader } from '@/components/ScreenHeader';
 import { MacroBar } from '@/components/nutrition/MacroBar';
 import { MealCard } from '@/components/nutrition/MealCard';
 import { getSelectedMealOption, useNutritionPlan } from '@/components/nutrition/NutritionProvider';
-
-// TODO: derive from the plan's trainer once joined into the query.
-const TRAINER_NAME = 'Carlos Moreno';
 
 /** Relative label for when the plan was assigned. */
 function assignedLabel(iso: string): string {
