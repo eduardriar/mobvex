@@ -8,17 +8,15 @@ import type {
 
 /**
  * Resolve an invite token to the invitation plus a summary of the inviting
- * trainer. Returns null when the token does not exist (uses `maybeSingle`).
- * Callers should still check `status`/`expires_at` before trusting it.
+ * trainer. Returns null when the token does not exist. Called pre-auth (the
+ * student hasn't signed in yet), so this goes through the `invitation_by_token`
+ * SECURITY DEFINER RPC (see sql/rls.sql) rather than a direct table select —
+ * with RLS on, anon/authenticated can't read `invitations`/`users` directly,
+ * and the RPC returns only safe trainer fields (never the email).
  */
 export async function getInvitationByToken(token: string) {
-  return supabase
-    .from('invitations')
-    .select(
-      '*, trainer:users!invitations_trainer_id_fkey(id, name, avatar_url)',
-    )
-    .eq('token', token)
-    .maybeSingle<InvitationWithTrainer>();
+  const { data, error } = await supabase.rpc('invitation_by_token', { p_token: token });
+  return { data: data as InvitationWithTrainer | null, error };
 }
 
 /** Create an invitation (trainer-side / seeding). */
