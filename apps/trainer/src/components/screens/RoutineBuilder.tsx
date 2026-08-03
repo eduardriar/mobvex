@@ -41,6 +41,7 @@ const cellInput = (center = false) =>
 export function RoutineBuilder({ studentId }: Props) {
   const s = studentById(studentId) ?? STUDENTS[0]!;
   const base = routineFor(s.id);
+  console.log(base)
 
   const [name, setName] = useState(base.name);
   const [days, setDays] = useState<Record<DayKey, RoutineDay | null>>(() =>
