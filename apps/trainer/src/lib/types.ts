@@ -76,6 +76,8 @@ export type CatalogExercise = {
 export type NewExercisePayload = Omit<CatalogExercise, "id">;
 
 export type Exercise = {
+  /** FK to the catalog exercise this row was picked from. */
+  exerciseId: string;
   name: string;
   sets: number | string;
   reps: string;

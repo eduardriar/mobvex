@@ -15,13 +15,13 @@ import { WeightChart } from "@/components/trainer/WeightChart";
 import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
 import { useDiet } from "@/hooks/useDiet";
 import { useRecipes } from "@/hooks/useRecipes";
+import { useRoutine } from "@/hooks/useRoutine";
 import {
   DAYS,
   HUE,
   MEAL_SLOTS,
   STUDENTS,
   recipeById,
-  routineFor,
   studentById,
 } from "@/lib/data";
 import { cn } from "@/lib/cn";
@@ -57,7 +57,7 @@ function SectionLabel({
 
 export function StudentScreen({ studentId, onEditRoutine, onEditDiet }: Props) {
   const s = studentById(studentId) ?? STUDENTS[0]!;
-  const routine = routineFor(s.id);
+  const { routine, loading: routineLoading } = useRoutine(s.id);
   // useRecipes hydrates the shared library so recipeById resolves the plan's
   // recipes even when the Dietas screen hasn't been visited this session.
   const { loading: recipesLoading } = useRecipes();
@@ -221,48 +221,60 @@ export function StudentScreen({ studentId, onEditRoutine, onEditDiet }: Props) {
                 leadingIcon={<Icon name="edit" size={15} />}
                 onClick={onEditRoutine}
               >
-                Editar rutina
+                {T.editRoutine}
               </Button>
             }
           >
-            Rutina actual
+            {T.routineTitle}
           </SectionLabel>
           <Card style={{ padding: 20 }}>
-            <div className="mb-4 flex items-center justify-between">
-              <span className="font-body text-[15px] font-medium text-text">
-                {routine.name}
+            {routineLoading ? (
+              <LoadingIndicator label={T.loadingRoutine} />
+            ) : !routine ? (
+              <span className="font-body text-[14px] text-muted">
+                {T.noRoutine}
               </span>
-              <Badge>
-                {Object.values(routine.days).filter(Boolean).length} días/sem
-              </Badge>
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {DAYS.map((d) => {
-                const day = routine.days[d];
-                if (!day) return null;
-                return (
-                  <div
-                    key={d}
-                    className="flex gap-3.5 rounded-xl border border-border bg-surface px-3.5 py-3"
-                  >
-                    <div className="w-[38px] shrink-0 font-display text-[18px] tracking-[1px] text-accent">
-                      {d}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="mb-0.5 font-body text-[13px] font-medium text-text">
-                        {day.focus}
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <span className="font-body text-[15px] font-medium text-text">
+                    {routine.name}
+                  </span>
+                  <Badge>
+                    {T.daysPerWeekBadge(
+                      Object.values(routine.days).filter(Boolean).length,
+                    )}
+                  </Badge>
+                </div>
+                <div className="flex flex-col gap-2.5">
+                  {DAYS.map((d) => {
+                    const day = routine.days[d];
+                    if (!day) return null;
+                    return (
+                      <div
+                        key={d}
+                        className="flex gap-3.5 rounded-xl border border-border bg-surface px-3.5 py-3"
+                      >
+                        <div className="w-[38px] shrink-0 font-display text-[18px] tracking-[1px] text-accent">
+                          {d}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-0.5 font-body text-[13px] font-medium text-text">
+                            {day.focus}
+                          </div>
+                          <div className="truncate font-body text-[12px] text-muted">
+                            {day.ex.map((e) => e.name).join(" · ")}
+                          </div>
+                        </div>
+                        <span className="whitespace-nowrap font-body text-[12px] text-muted">
+                          {T.exerciseCountBadge(day.ex.length)}
+                        </span>
                       </div>
-                      <div className="truncate font-body text-[12px] text-muted">
-                        {day.ex.map((e) => e.name).join(" · ")}
-                      </div>
-                    </div>
-                    <span className="whitespace-nowrap font-body text-[12px] text-muted">
-                      {day.ex.length} ej.
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
           </Card>
         </div>
 
