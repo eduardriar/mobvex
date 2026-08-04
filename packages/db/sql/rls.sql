@@ -10,10 +10,11 @@
 --   * a trainer reads their own roster (their students and those students' users);
 --   * a student reads their assigned trainer's profile (for the dashboard header).
 --
--- SCOPE: this covers `users` and `students` only. The other tables (progress,
--- routines, nutrition, exercises, workout_sessions, set_logs, progress_photos,
--- invitations) and the progress-photos storage bucket still run dev-stage
--- policies and need their own auth-scoped pass before launch.
+-- SCOPE: this covers `users`, `students`, `exercises`, `routines` and
+-- `routine_exercises`. The other tables (progress, nutrition, workout_sessions,
+-- set_logs, progress_photos, invitations) and the progress-photos storage
+-- bucket still run dev-stage policies and need their own auth-scoped pass
+-- before launch.
 --
 -- INVITE RESOLUTION: the registration flow resolves an invite token BEFORE the
 -- student authenticates, and shows the inviting trainer's name. With `users` RLS
@@ -84,6 +85,113 @@ create policy "students_manage_update" on students
   for update to authenticated
   using (user_id = auth.uid() or trainer_id = auth.uid())
   with check (user_id = auth.uid() or trainer_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
+-- exercises
+-- ---------------------------------------------------------------------------
+alter table exercises enable row level security;
+
+drop policy if exists "exercises_catalog_select" on exercises;
+drop policy if exists "exercises_own_select" on exercises;
+drop policy if exists "exercises_student_select" on exercises;
+drop policy if exists "exercises_trainer_insert" on exercises;
+drop policy if exists "exercises_trainer_update" on exercises;
+drop policy if exists "exercises_trainer_delete" on exercises;
+
+-- Anyone authenticated reads the shared global catalog (trainer_id is null).
+create policy "exercises_catalog_select" on exercises
+  for select to authenticated
+  using (trainer_id is null);
+
+-- A trainer reads their own private exercises.
+create policy "exercises_own_select" on exercises
+  for select to authenticated
+  using (trainer_id = auth.uid());
+
+-- A student reads their own trainer's private exercises (their assigned
+-- routines may reference them).
+create policy "exercises_student_select" on exercises
+  for select to authenticated
+  using (trainer_id in (select trainer_id from students where user_id = auth.uid()));
+
+-- A trainer creates only their own exercises (never a shared catalog row).
+create policy "exercises_trainer_insert" on exercises
+  for insert to authenticated
+  with check (trainer_id = auth.uid());
+
+-- A trainer updates only their own exercises.
+create policy "exercises_trainer_update" on exercises
+  for update to authenticated
+  using (trainer_id = auth.uid())
+  with check (trainer_id = auth.uid());
+
+-- A trainer deletes only their own exercises.
+create policy "exercises_trainer_delete" on exercises
+  for delete to authenticated
+  using (trainer_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
+-- routines
+-- ---------------------------------------------------------------------------
+alter table routines enable row level security;
+
+drop policy if exists "routines_select" on routines;
+drop policy if exists "routines_trainer_insert" on routines;
+drop policy if exists "routines_trainer_update" on routines;
+drop policy if exists "routines_trainer_delete" on routines;
+
+-- A trainer reads their own routines; a student reads their own assigned routines.
+create policy "routines_select" on routines
+  for select to authenticated
+  using (
+    trainer_id = auth.uid()
+    or student_id in (select id from students where user_id = auth.uid())
+  );
+
+-- A trainer creates routines only for their own students.
+create policy "routines_trainer_insert" on routines
+  for insert to authenticated
+  with check (
+    trainer_id = auth.uid()
+    and student_id in (select id from students where trainer_id = auth.uid())
+  );
+
+-- A trainer updates only their own routines.
+create policy "routines_trainer_update" on routines
+  for update to authenticated
+  using (trainer_id = auth.uid())
+  with check (trainer_id = auth.uid());
+
+-- A trainer deletes only their own routines.
+create policy "routines_trainer_delete" on routines
+  for delete to authenticated
+  using (trainer_id = auth.uid());
+
+-- ---------------------------------------------------------------------------
+-- routine_exercises — no trainer_id/student_id column; ownership flows
+-- through the parent routine.
+-- ---------------------------------------------------------------------------
+alter table routine_exercises enable row level security;
+
+drop policy if exists "routine_exercises_select" on routine_exercises;
+drop policy if exists "routine_exercises_trainer_write" on routine_exercises;
+
+-- Readable by whoever can read the parent routine (owning trainer or assigned student).
+create policy "routine_exercises_select" on routine_exercises
+  for select to authenticated
+  using (
+    routine_id in (
+      select id from routines
+      where trainer_id = auth.uid()
+         or student_id in (select id from students where user_id = auth.uid())
+    )
+  );
+
+-- Only the owning trainer writes (insert/update/delete) prescriptions.
+create policy "routine_exercises_trainer_write" on routine_exercises
+  for all to authenticated
+  using (routine_id in (select id from routines where trainer_id = auth.uid()))
+  with check (routine_id in (select id from routines where trainer_id = auth.uid()));
 
 -- ---------------------------------------------------------------------------
 -- invitation_by_token — pre-auth invite resolution without exposing `users`.

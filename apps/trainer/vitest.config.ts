@@ -16,5 +16,6 @@ export default defineConfig({
         url: "https://app.mobvex.test",
       },
     },
+    setupFiles: ["./vitest.setup.ts"],
   },
 });

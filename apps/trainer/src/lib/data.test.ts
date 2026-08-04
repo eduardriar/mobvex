@@ -10,7 +10,6 @@ import {
   macrosFor,
   recipeFromDb,
   recipePayloadToDb,
-  routineFor,
   STUDENTS,
   studentById,
   studentFromDb,
@@ -352,15 +351,5 @@ describe("createStudent / hydrateStudents / studentById", () => {
   it("returns undefined for a null or unknown id", () => {
     expect(studentById(null)).toBeUndefined();
     expect(studentById("nope")).toBeUndefined();
-  });
-});
-
-describe("routineFor", () => {
-  it("returns the specific routine for a known student id", () => {
-    expect(routineFor("ava").name).toBe("Definición · 5 días");
-  });
-
-  it("returns the default skeleton routine for an unknown id", () => {
-    expect(routineFor("someone-new").name).toBe("Full body · 3 días");
   });
 });

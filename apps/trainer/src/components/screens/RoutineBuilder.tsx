@@ -1,36 +1,37 @@
-/* Mobvex Trainer — Routine builder (weekly split, día → ejercicios). */
+/* Mobvex Trainer — Routine builder (weekly split, día → ejercicios), backed
+   by the DB: loads the student's active weekly plan and saves the built one
+   as one routine per active day. */
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
-import { DAYS, STUDENTS, routineFor, studentById } from "@/lib/data";
+import { LoadingIndicator } from "@/components/ui/LoadingIndicator";
+import { useExercises } from "@/hooks/useExercises";
+import { useRoutine } from "@/hooks/useRoutine";
+import { DAYS, STUDENTS, studentById } from "@/lib/data";
 import { cn } from "@/lib/cn";
-import type { DayKey, Exercise, RoutineDay } from "@/lib/types";
+import { COPY } from "@/lib/copy";
+import type { CatalogExercise, DayKey, Exercise, RoutineDay } from "@/lib/types";
+import { ExercisePicker } from "./routine-builder/components/ExercisePicker";
 
-const EXERCISE_LIBRARY = [
-  "Sentadilla",
-  "Peso muerto",
-  "Press banca",
-  "Press militar",
-  "Remo con barra",
-  "Jalón al pecho",
-  "Dominadas",
-  "Zancadas",
-  "Prensa",
-  "Curl bíceps",
-  "Extensión tríceps",
-  "Elevación lateral",
-  "Hip thrust",
-  "Plancha",
-  "Face pull",
-];
+const T = COPY.routineBuilder;
 
 type Props = {
   studentId: string;
 };
+
+const emptyDays = (): Record<DayKey, RoutineDay | null> => ({
+  Lun: null,
+  Mar: null,
+  Mié: null,
+  Jue: null,
+  Vie: null,
+  Sáb: null,
+  Dom: null,
+});
 
 const cellInput = (center = false) =>
   cn(
@@ -40,17 +41,40 @@ const cellInput = (center = false) =>
 
 export function RoutineBuilder({ studentId }: Props) {
   const s = studentById(studentId) ?? STUDENTS[0]!;
-  const base = routineFor(s.id);
-  console.log(base)
+  const {
+    routine,
+    loading: routineLoading,
+    error: routineError,
+    save,
+  } = useRoutine(s.id);
+  const {
+    exercises,
+    loading: exercisesLoading,
+    error: exercisesError,
+  } = useExercises();
 
-  const [name, setName] = useState(base.name);
-  const [days, setDays] = useState<Record<DayKey, RoutineDay | null>>(() =>
-    JSON.parse(JSON.stringify(base.days)),
-  );
-  const firstActive = DAYS.find((d) => days[d]) ?? "Lun";
-  const [sel, setSel] = useState<DayKey>(firstActive);
+  const [name, setName] = useState("");
+  const [days, setDays] = useState<Record<DayKey, RoutineDay | null>>(emptyDays);
+  const [initialized, setInitialized] = useState(false);
+  const [sel, setSel] = useState<DayKey>("Lun");
   const [adderOpen, setAdderOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Seed the editable state once from the student's active plan (or a fresh
+  // one when none exists yet). Deep-clone so edits never mutate the loaded
+  // reference directly.
+  useEffect(() => {
+    if (routineLoading || initialized) return;
+    setName(routine?.name || T.defaultPlanName);
+    const seeded: Record<DayKey, RoutineDay | null> = routine
+      ? JSON.parse(JSON.stringify(routine.days))
+      : emptyDays();
+    setDays(seeded);
+    setSel(DAYS.find((d) => seeded[d]) ?? "Lun");
+    setInitialized(true);
+  }, [routineLoading, initialized, routine]);
 
   const day = days[sel];
 
@@ -67,23 +91,33 @@ export function RoutineBuilder({ studentId }: Props) {
 
   const toggleRest = () =>
     update((n) => {
-      n[sel] = n[sel] ? null : { focus: "Nuevo bloque", ex: [] };
+      n[sel] = n[sel] ? null : { focus: T.newBlockFocus, ex: [] };
     });
   const setFocus = (v: string) =>
     update((n) => {
       const d = n[sel];
       if (d) d.focus = v;
     });
-  const addEx = (exName: string) =>
+  const addEx = (exercise: CatalogExercise) =>
     update((n) => {
-      if (!n[sel]) n[sel] = { focus: "Nuevo bloque", ex: [] };
-      n[sel]!.ex.push({ name: exName, sets: 4, reps: "10", kg: 0 });
+      if (!n[sel]) n[sel] = { focus: T.newBlockFocus, ex: [] };
+      n[sel]!.ex.push({
+        exerciseId: exercise.id,
+        name: exercise.name,
+        sets: 4,
+        reps: "10",
+        kg: 0,
+      });
     });
   const removeEx = (i: number) =>
     update((n) => {
       n[sel]!.ex.splice(i, 1);
     });
-  const editEx = (i: number, key: keyof Exercise, v: string) =>
+  const editEx = (
+    i: number,
+    key: Exclude<keyof Exercise, "exerciseId" | "name">,
+    v: string,
+  ) =>
     update((n) => {
       n[sel]!.ex[i]![key] = v;
     });
@@ -91,32 +125,62 @@ export function RoutineBuilder({ studentId }: Props) {
   const activeDays = DAYS.filter((d) => days[d]).length;
   const totalEx = DAYS.reduce((a, d) => a + (days[d]?.ex.length ?? 0), 0);
 
+  const submit = async () => {
+    setSaving(true);
+    setSaveError(null);
+    setSaved(false);
+    const error = await save({ name, days });
+    setSaving(false);
+    if (error) setSaveError(error);
+    else setSaved(true);
+  };
+
+  if (routineLoading || exercisesLoading) {
+    return <LoadingIndicator className="flex-1" label={T.loading} />;
+  }
+
+  const loadError = routineError ?? exercisesError;
+  if (loadError) {
+    return (
+      <div className="flex flex-1 items-center justify-center px-8">
+        <span className="font-body text-[14px] text-accent-2">{loadError}</span>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto px-8 pb-12 pt-[26px]">
       {/* meta row */}
       <div className="mb-6 flex flex-wrap items-end gap-5">
         <Input
-          label="Nombre de la rutina"
+          label={T.planNameLabel}
           value={name}
           onChange={(e) => setName(e.target.value)}
           containerClassName="w-[320px]"
         />
         <div className="flex gap-[22px] pb-1">
-          <Meta value={`${activeDays}`} label="días/semana" />
-          <Meta value={`${totalEx}`} label="ejercicios" />
+          <Meta value={`${activeDays}`} label={T.daysPerWeek} />
+          <Meta value={`${totalEx}`} label={T.exercisesMeta} />
         </div>
         <div className="ml-auto flex items-center gap-3 pb-0.5">
+          {saveError && (
+            <span className="font-body text-[13px] text-accent-2">
+              {saveError}
+            </span>
+          )}
           {saved && (
             <span className="inline-flex items-center gap-1.5 font-body text-[13px] text-accent">
-              <Icon name="check" size={16} /> Asignada a {s.name.split(" ")[0]}
+              <Icon name="check" size={16} />{" "}
+              {T.assignedTo(s.name.split(" ")[0] ?? s.name)}
             </span>
           )}
           <Button
             variant="primary"
-            onClick={() => setSaved(true)}
+            disabled={saving}
+            onClick={() => void submit()}
             leadingIcon={<Icon name="check" size={18} color="#0A0A0B" />}
           >
-            Guardar y asignar
+            {saving ? T.saving : T.saveAssign}
           </Button>
         </div>
       </div>
@@ -155,7 +219,7 @@ export function RoutineBuilder({ studentId }: Props) {
                   !has && "opacity-55",
                 )}
               >
-                {has ? days[d]!.focus : "Descanso"}
+                {has ? days[d]!.focus : T.restDayTabLabel}
               </div>
             </button>
           );
@@ -167,14 +231,14 @@ export function RoutineBuilder({ studentId }: Props) {
         {!day ? (
           <div className="px-5 py-10 text-center">
             <div className="mb-[18px] font-body text-[15px] text-muted">
-              {sel} es un día de descanso.
+              {T.restDay(sel)}
             </div>
             <Button
               variant="secondary"
               onClick={toggleRest}
               leadingIcon={<Icon name="plus" size={16} />}
             >
-              Añadir entrenamiento
+              {T.addWorkout}
             </Button>
           </div>
         ) : (
@@ -190,20 +254,22 @@ export function RoutineBuilder({ studentId }: Props) {
                 onClick={toggleRest}
                 className="inline-flex cursor-pointer items-center gap-1.5 rounded-input border border-border bg-transparent px-3.5 py-2 font-body text-[13px] text-muted hover:text-text"
               >
-                Marcar descanso
+                {T.markRest}
               </button>
             </div>
 
             {/* column headers */}
             <div className="grid grid-cols-[28px_1fr_90px_90px_100px_40px] gap-3.5 border-b border-border px-1 pb-2.5">
-              {["", "Ejercicio", "Series", "Reps", "Carga", ""].map((h, i) => (
-                <span
-                  key={i}
-                  className="font-body text-[11px] uppercase tracking-[1px] text-muted"
-                >
-                  {h}
-                </span>
-              ))}
+              {["", T.colExercise, T.colSets, T.colReps, T.colWeight, ""].map(
+                (h, i) => (
+                  <span
+                    key={i}
+                    className="font-body text-[11px] uppercase tracking-[1px] text-muted"
+                  >
+                    {h}
+                  </span>
+                ),
+              )}
             </div>
 
             {/* exercise rows */}
@@ -216,11 +282,9 @@ export function RoutineBuilder({ studentId }: Props) {
                   <span className="flex text-muted">
                     <Icon name="grip" size={18} />
                   </span>
-                  <input
-                    value={e.name}
-                    onChange={(ev) => editEx(i, "name", ev.target.value)}
-                    className={cellInput()}
-                  />
+                  <span className="truncate font-body text-[14px] text-text">
+                    {e.name}
+                  </span>
                   <input
                     value={e.sets}
                     onChange={(ev) => editEx(i, "sets", ev.target.value)}
@@ -237,7 +301,9 @@ export function RoutineBuilder({ studentId }: Props) {
                       onChange={(ev) => editEx(i, "kg", ev.target.value)}
                       className={cellInput(true)}
                     />
-                    <span className="font-body text-[12px] text-muted">kg</span>
+                    <span className="font-body text-[12px] text-muted">
+                      {T.kgUnit}
+                    </span>
                   </div>
                   <button
                     type="button"
@@ -250,7 +316,7 @@ export function RoutineBuilder({ studentId }: Props) {
               ))}
               {day.ex.length === 0 && (
                 <div className="px-1 py-6 font-body text-[14px] text-muted">
-                  Aún no hay ejercicios en este día.
+                  {T.emptyDay}
                 </div>
               )}
             </div>
@@ -263,40 +329,14 @@ export function RoutineBuilder({ studentId }: Props) {
                   onClick={() => setAdderOpen(true)}
                   leadingIcon={<Icon name="plus" size={16} />}
                 >
-                  Añadir ejercicio
+                  {T.addExercise}
                 </Button>
               ) : (
-                <div className="rounded-card border border-border bg-surface p-4">
-                  <div className="mb-3 font-body text-[11px] uppercase tracking-[1px] text-muted">
-                    Biblioteca de ejercicios
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {EXERCISE_LIBRARY.map((ex) => (
-                      <button
-                        key={ex}
-                        type="button"
-                        onClick={() => addEx(ex)}
-                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-surface-2 px-3.5 py-2 font-body text-[13px] text-text hover:border-accent-card-border"
-                      >
-                        <Icon
-                          name="plus"
-                          size={13}
-                          style={{ color: "var(--color-accent)" }}
-                        />{" "}
-                        {ex}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3.5 flex justify-end">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setAdderOpen(false)}
-                    >
-                      Listo
-                    </Button>
-                  </div>
-                </div>
+                <ExercisePicker
+                  exercises={exercises}
+                  onPick={addEx}
+                  onDone={() => setAdderOpen(false)}
+                />
               )}
             </div>
           </div>
