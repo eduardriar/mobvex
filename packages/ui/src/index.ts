@@ -27,13 +27,13 @@ export type { Colors, Spacing, Radius, Tokens, CategoryHue } from './tokens';
 export { Text } from './Text';
 export type { TextVariant } from './Text';
 
-export { Button } from './Button';
-export type { ButtonVariant, ButtonSize } from './Button';
+export { Button } from './button';
+export type { ButtonVariant, ButtonSize } from './button';
 
 export { Input } from './Input';
 
-export { Card } from './Card';
-export type { CardVariant } from './Card';
+export { Card } from './card';
+export type { CardVariant } from './card';
 
 export { Badge } from './Badge';
 export type { BadgeVariant } from './Badge';

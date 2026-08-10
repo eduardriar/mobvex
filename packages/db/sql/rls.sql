@@ -24,6 +24,25 @@
 -- the app's `getInvitationByToken` to call it:
 --   supabase.rpc('invitation_by_token', { p_token })
 
+-- A `users`-table policy must never query `users` directly in its USING/WITH
+-- CHECK clause — evaluating that subquery re-applies `users`'s own SELECT
+-- policies, which requires re-evaluating the policy being evaluated, and
+-- Postgres raises "infinite recursion detected in policy for relation
+-- users". SECURITY DEFINER runs the query as the function owner, bypassing
+-- RLS on `users` internally, so policies can check the caller's own row
+-- without recursing.
+create or replace function public.is_trainer(uid uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from users where id = uid and role = 'trainer'
+  );
+$$;
+
 -- ---------------------------------------------------------------------------
 -- users
 -- ---------------------------------------------------------------------------
@@ -34,6 +53,7 @@ drop policy if exists "users_trainer_select" on users;
 drop policy if exists "users_roster_select" on users;
 drop policy if exists "users_self_insert" on users;
 drop policy if exists "users_self_update" on users;
+drop policy if exists "users_trainer_insert_student" on users;
 
 -- A user can read their own profile.
 create policy "users_self_select" on users
@@ -55,6 +75,13 @@ create policy "users_self_insert" on users
   for insert to authenticated
   with check (id = auth.uid());
 
+-- A trainer creates the `users` profile row for a brand-new student (the
+-- new-student flow inserts this row before the student has an auth account
+-- of their own, so `id = auth.uid()` above doesn't apply here).
+create policy "users_trainer_insert_student" on users
+  for insert to authenticated
+  with check (role = 'student' and public.is_trainer(auth.uid()));
+
 -- A user updates only their own profile.
 create policy "users_self_update" on users
   for update to authenticated
@@ -68,6 +95,7 @@ alter table students enable row level security;
 
 drop policy if exists "students_select" on students;
 drop policy if exists "students_self_insert" on students;
+drop policy if exists "students_trainer_insert" on students;
 drop policy if exists "students_manage_update" on students;
 
 -- A student reads their own record; a trainer reads their roster.
@@ -79,6 +107,11 @@ create policy "students_select" on students
 create policy "students_self_insert" on students
   for insert to authenticated
   with check (user_id = auth.uid());
+
+-- A trainer creates the roster row linking a brand-new student to themself.
+create policy "students_trainer_insert" on students
+  for insert to authenticated
+  with check (trainer_id = auth.uid());
 
 -- A student updates their own record; a trainer manages their roster.
 create policy "students_manage_update" on students
