@@ -8,6 +8,9 @@ export const COPY = {
     sessionExpired: "Tu sesión ha expirado. Vuelve a iniciar sesión.",
   },
   roster: {
+    title: "Mis alumnos",
+    subtitle: "Gestiona tu equipo y su progreso",
+    newStudent: "Nuevo alumno",
     loadingStudents: "Cargando alumnos...",
   },
   exercises: {
@@ -205,6 +208,11 @@ export const COPY = {
   },
   topbar: {
     searchPlaceholder: "Buscar alumno",
+  },
+  studentPage: {
+    title: "Ficha del alumno",
+    routineTitle: "Editor de rutina",
+    dietTitle: "Editor de dieta",
   },
   student: {
     routineTitle: "Rutina actual",
