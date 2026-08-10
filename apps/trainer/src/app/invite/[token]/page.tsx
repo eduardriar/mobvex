@@ -1,5 +1,5 @@
-/* Public invite landing page: /i/<token>. This is the HTTPS link trainers
-   share — no auth, student-facing. */
+/* Public invite landing page: /invite/<token>. This is the HTTPS link
+   trainers share — no auth, student-facing. */
 import type { Metadata } from "next";
 import { InviteScreen } from "@/components/screens/InviteScreen";
 import { COPY } from "@/lib/copy";

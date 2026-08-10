@@ -1,11 +1,11 @@
 /* Mobvex Trainer — student invitation links.
 
    The link the trainer shares is HTTPS (messaging apps only linkify http/s),
-   pointing at this app's public landing page `/i/<token>`. The landing page
-   is what opens the mobile app via its custom scheme (from apps/mobile
+   pointing at this app's public landing page `/invite/<token>`. The landing
+   page is what opens the mobile app via its custom scheme (from apps/mobile
    app.json). Both builders run client-side only. */
 
-const INVITE_PATH = "/i";
+const INVITE_PATH = "/invite";
 const APP_DEEP_LINK_BASE = "mobvex://student/register";
 
 /** Shareable HTTPS link to the invite landing page (clickable anywhere). */
