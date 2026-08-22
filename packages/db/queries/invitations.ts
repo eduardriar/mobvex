@@ -8,17 +8,17 @@ import type {
 
 /**
  * Resolve an invite token to the invitation plus a summary of the inviting
- * trainer. Returns null when the token does not exist (uses `maybeSingle`).
+ * trainer. Called pre-auth from the public `/i/[token]` page, so this must go
+ * through the `invitation_by_token` RPC (SECURITY DEFINER) rather than a
+ * direct table select — RLS on `invitations`/`users` only grants the owning
+ * trainer read access, which would hide the row from the anon student
+ * resolving their own invite. Returns null when the token does not exist.
  * Callers should still check `status`/`expires_at` before trusting it.
  */
 export async function getInvitationByToken(token: string) {
-  return supabase
-    .from('invitations')
-    .select(
-      '*, trainer:users!invitations_trainer_id_fkey(id, name, avatar_url)',
-    )
-    .eq('token', token)
-    .maybeSingle<InvitationWithTrainer>();
+  return supabase.rpc('invitation_by_token', { p_token: token }) as unknown as Promise<
+    { data: InvitationWithTrainer | null; error: Error | null }
+  >;
 }
 
 /** Create an invitation (trainer-side / seeding). */
