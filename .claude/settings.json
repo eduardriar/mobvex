@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/dead-code-check.sh",
+            "timeout": 90,
+            "statusMessage": "Checking for dead code introduced this turn..."
+          }
+        ]
+      }
+    ]
+  }
+}

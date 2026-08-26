@@ -44,13 +44,29 @@ export type StudentWithUser = Student & {
   user: Pick<User, 'id' | 'name' | 'email' | 'avatar_url'>;
 };
 
-/** A routine assigned to a student. */
+export type DayOfWeek =
+  | 'monday'
+  | 'tuesday'
+  | 'wednesday'
+  | 'thursday'
+  | 'friday'
+  | 'saturday'
+  | 'sunday';
+
+/**
+ * A routine assigned to a student. `day_of_week` is null for routines that
+ * aren't part of a day-based weekly split (e.g. seed data); the trainer app's
+ * routine builder creates one Routine per active day, using `name` for that
+ * day's focus label and `description` for the overall plan's name (shared
+ * across every day in the same plan).
+ */
 export type Routine = {
   id: string;
   student_id: string;
   trainer_id: string;
   name: string;
   description?: string;
+  day_of_week?: DayOfWeek;
   active: boolean;
   created_at: string;
 };
@@ -93,6 +109,8 @@ export type RoutineExercise = {
   /** e.g. "10-12" or "to failure". */
   reps: string;
   rest_seconds: number;
+  /** Prescribed load for this exercise, e.g. 40.5 (kg). Null when not tracked. */
+  target_weight?: number | null;
   notes?: string;
 };
 
