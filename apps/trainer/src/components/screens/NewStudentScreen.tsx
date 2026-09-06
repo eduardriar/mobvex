@@ -140,7 +140,7 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
               variant="secondary"
               onClick={onCancel}
               disabled={creating}
-              className="flex-1"
+              className="min-w-0 flex-1"
             >
               {T.cancel}
             </Button>
@@ -148,7 +148,7 @@ export function NewStudentScreen({ onDone, onCancel }: Props) {
               variant="primary"
               onClick={submit}
               disabled={!valid || creating}
-              className="flex-1 whitespace-nowrap"
+              className="min-w-0 flex-1 whitespace-nowrap"
               leadingIcon={<Icon name="plus" size={18} color="#0A0A0B" />}
             >
               {creating ? T.creating : T.create}

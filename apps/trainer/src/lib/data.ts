@@ -3,6 +3,7 @@
    Routines and student progress are still mock while their DB wiring lands. */
 
 import type {
+  DayOfWeek as DbDayOfWeek,
   Exercise as DbExercise,
   Goal as DbGoal,
   MealHue,
@@ -11,7 +12,9 @@ import type {
   NewRecipe,
   NewRecipeItemLine,
   NutritionPlan,
+  PlanDayInput,
   RecipeWithItems,
+  RoutineWithExercises,
   StudentWithUser,
 } from "@mobvex/db";
 import type {
@@ -21,6 +24,7 @@ import type {
   DietMeal,
   DietMealOption,
   EquipmentOption,
+  Exercise,
   GoalKey,
   Hue,
   HueKey,
@@ -35,6 +39,7 @@ import type {
   Recipe,
   RecipeIngredient,
   Routine,
+  RoutineDay,
   Student,
 } from "./types";
 
@@ -220,99 +225,82 @@ export const STUDENTS: Student[] = [
 /* ---- Routines: weekly split (día → ejercicios) ---- */
 export const DAYS: DayKey[] = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 
-const ROUTINE_BY_ID: Record<string, Routine> = {
-  ava: {
-    name: "Definición · 5 días",
-    days: {
-      Lun: {
-        focus: "Tren superior",
-        ex: [
-          { name: "Press banca mancuerna", sets: 4, reps: "12", kg: 14 },
-          { name: "Remo con barra", sets: 4, reps: "12", kg: 30 },
-          { name: "Press militar", sets: 3, reps: "12", kg: 18 },
-          { name: "Face pull", sets: 3, reps: "15", kg: 20 },
-        ],
-      },
-      Mar: {
-        focus: "Tren inferior",
-        ex: [
-          { name: "Sentadilla goblet", sets: 4, reps: "12", kg: 20 },
-          { name: "Peso muerto rumano", sets: 4, reps: "10", kg: 40 },
-          { name: "Zancadas", sets: 3, reps: "12", kg: 12 },
-          { name: "Elevación de gemelo", sets: 4, reps: "15", kg: 30 },
-        ],
-      },
-      Mié: {
-        focus: "Cardio + core",
-        ex: [
-          { name: "HIIT cinta", sets: 1, reps: "20 min", kg: 0 },
-          { name: "Plancha", sets: 4, reps: "45 s", kg: 0 },
-          { name: "Crunch en polea", sets: 4, reps: "15", kg: 25 },
-        ],
-      },
-      Jue: {
-        focus: "Empuje",
-        ex: [
-          { name: "Press inclinado", sets: 4, reps: "10", kg: 16 },
-          { name: "Aperturas", sets: 3, reps: "15", kg: 8 },
-          { name: "Fondos asistidos", sets: 3, reps: "12", kg: 0 },
-          { name: "Extensión de tríceps", sets: 3, reps: "15", kg: 14 },
-        ],
-      },
-      Vie: {
-        focus: "Tirón",
-        ex: [
-          { name: "Jalón al pecho", sets: 4, reps: "12", kg: 35 },
-          { name: "Remo sentado", sets: 4, reps: "12", kg: 32 },
-          { name: "Curl bíceps", sets: 3, reps: "12", kg: 10 },
-          { name: "Pájaros", sets: 3, reps: "15", kg: 6 },
-        ],
-      },
-      Sáb: null,
-      Dom: null,
-    },
-  },
+/* DB stores day-of-week in English (locale-agnostic); the UI grid uses the
+   Spanish DayKey abbreviations — same translation-table idiom as DB_TO_GOAL. */
+export const DAY_TO_DB: Record<DayKey, DbDayOfWeek> = {
+  Lun: "monday",
+  Mar: "tuesday",
+  Mié: "wednesday",
+  Jue: "thursday",
+  Vie: "friday",
+  Sáb: "saturday",
+  Dom: "sunday",
 };
 
-/* default skeleton routine for students without a detailed plan */
-function defaultRoutine(): Routine {
-  return {
-    name: "Full body · 3 días",
-    days: {
-      Lun: {
-        focus: "Full body A",
-        ex: [
-          { name: "Sentadilla", sets: 4, reps: "10", kg: 40 },
-          { name: "Press banca", sets: 4, reps: "10", kg: 30 },
-          { name: "Remo con barra", sets: 3, reps: "12", kg: 30 },
-        ],
-      },
-      Mar: null,
-      Mié: {
-        focus: "Full body B",
-        ex: [
-          { name: "Peso muerto", sets: 4, reps: "8", kg: 60 },
-          { name: "Press militar", sets: 4, reps: "10", kg: 20 },
-          { name: "Dominadas asistidas", sets: 3, reps: "10", kg: 0 },
-        ],
-      },
-      Jue: null,
-      Vie: {
-        focus: "Full body C",
-        ex: [
-          { name: "Prensa", sets: 4, reps: "12", kg: 90 },
-          { name: "Press inclinado", sets: 4, reps: "10", kg: 22 },
-          { name: "Curl + extensión", sets: 3, reps: "15", kg: 12 },
-        ],
-      },
-      Sáb: null,
-      Dom: null,
-    },
+export const DB_TO_DAY: Record<DbDayOfWeek, DayKey> = {
+  monday: "Lun",
+  tuesday: "Mar",
+  wednesday: "Mié",
+  thursday: "Jue",
+  friday: "Vie",
+  saturday: "Sáb",
+  sunday: "Dom",
+};
+
+/* The routine builder has no rest-time input yet — every saved prescription
+   uses this default. */
+export const DEFAULT_REST_SECONDS = 60;
+
+/* Shapes the trainer's saved weekly plan (one DB routine row per active day)
+   into the builder's { name, days } grid. Rows with no day_of_week
+   (legacy/seed data predating this column) are skipped rather than guessed.
+   The overall plan name is recovered from any row's description — every day
+   in the same plan is saved with the same value (see routinePlanToDb). */
+export function routinesFromDb(routines: RoutineWithExercises[]): Routine {
+  const days: Record<DayKey, RoutineDay | null> = {
+    Lun: null,
+    Mar: null,
+    Mié: null,
+    Jue: null,
+    Vie: null,
+    Sáb: null,
+    Dom: null,
   };
+  for (const routine of routines) {
+    if (!routine.day_of_week) continue; // legacy/seed row — no day to place it on
+    const ex: Exercise[] = [...routine.routine_exercises]
+      .sort((a, b) => a.order - b.order)
+      .map((re) => ({
+        exerciseId: re.exercise_id,
+        name: re.exercise.name,
+        sets: re.sets,
+        reps: re.reps,
+        kg: re.target_weight ?? 0,
+      }));
+    days[DB_TO_DAY[routine.day_of_week]] = { focus: routine.name, ex };
+  }
+  return { name: routines[0]?.description ?? "", days };
 }
 
-export function routineFor(id: string): Routine {
-  return ROUTINE_BY_ID[id] ?? defaultRoutine();
+/* Shapes the builder's local { name, days } grid into saveRoutinePlan's
+   input — one PlanDayInput per active day; rest days are simply omitted. */
+export function routinePlanToDb(plan: Routine): PlanDayInput[] {
+  return DAYS.filter((day) => plan.days[day] !== null).map((day) => {
+    const routineDay = plan.days[day]!;
+    return {
+      dayOfWeek: DAY_TO_DB[day],
+      name: routineDay.focus,
+      description: plan.name.trim(),
+      exercises: routineDay.ex.map((exercise, index) => ({
+        exerciseId: exercise.exerciseId,
+        order: index,
+        sets: Number(exercise.sets) || 0,
+        reps: String(exercise.reps),
+        restSeconds: DEFAULT_REST_SECONDS,
+        targetWeight: Number(exercise.kg) || 0,
+      })),
+    };
+  });
 }
 
 /* ---- Exercise repository (Ejercicios screen) ---- */

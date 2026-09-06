@@ -61,6 +61,16 @@ enum InvitationStatus {
   revoked
 }
 
+enum DayOfWeek {
+  monday
+  tuesday
+  wednesday
+  thursday
+  friday
+  saturday
+  sunday
+}
+
 /// Base user — a trainer or a student. Extends Supabase Auth (auth.users).
 model User {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -103,15 +113,20 @@ model Student {
   @@map("students")
 }
 
-/// A routine assigned to a student.
+/// A routine assigned to a student. `dayOfWeek` is null for routines that
+/// aren't part of a day-based weekly split (e.g. seed data); the trainer
+/// app's routine builder creates one Routine per active day of the week,
+/// using `name` for that day's focus label and `description` for the
+/// overall plan's name (shared across every day in the same plan).
 model Routine {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  studentId   String   @map("student_id") @db.Uuid
-  trainerId   String   @map("trainer_id") @db.Uuid
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  studentId   String     @map("student_id") @db.Uuid
+  trainerId   String     @map("trainer_id") @db.Uuid
   name        String
   description String?
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  dayOfWeek   DayOfWeek? @map("day_of_week")
+  active      Boolean    @default(true)
+  createdAt   DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
 
   student          Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
   trainer          User              @relation("TrainerRoutines", fields: [trainerId], references: [id], onDelete: Cascade)
@@ -158,14 +173,16 @@ model Exercise {
 /// sets/reps/rest/order. Deleting a routine cascades these rows; an exercise
 /// still referenced here cannot be deleted (onDelete: Restrict).
 model RoutineExercise {
-  id          String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  routineId   String  @map("routine_id") @db.Uuid
-  exerciseId  String  @map("exercise_id") @db.Uuid
-  order       Int
-  sets        Int
-  reps        String
-  restSeconds Int     @map("rest_seconds")
-  notes       String?
+  id           String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  routineId    String  @map("routine_id") @db.Uuid
+  exerciseId   String  @map("exercise_id") @db.Uuid
+  order        Int
+  sets         Int
+  reps         String
+  restSeconds  Int     @map("rest_seconds")
+  /// Prescribed load for this exercise, e.g. 40.5 (kg). Null when not tracked.
+  targetWeight Float?  @map("target_weight")
+  notes        String?
 
   routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Restrict)
