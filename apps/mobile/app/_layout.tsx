@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFonts } from 'expo-font';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BebasNeue_400Regular } from '@expo-google-fonts/bebas-neue';
 import { DMSans_400Regular } from '@expo-google-fonts/dm-sans';
 import { colors } from '@mobvex/ui';
@@ -20,11 +21,13 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <NutritionProvider>
-        <RootNavigator />
-      </NutritionProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <NutritionProvider>
+          <RootNavigator />
+        </NutritionProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }
 
