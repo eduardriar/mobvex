@@ -148,6 +148,8 @@ alter table exercises enable row level security;
 drop policy if exists "exercises_catalog_select" on exercises;
 drop policy if exists "exercises_own_select" on exercises;
 drop policy if exists "exercises_student_select" on exercises;
+-- Dropped: a since-removed duplicate merged in from an earlier revision.
+drop policy if exists "exercises_select" on exercises;
 drop policy if exists "exercises_trainer_insert" on exercises;
 drop policy if exists "exercises_trainer_update" on exercises;
 drop policy if exists "exercises_trainer_delete" on exercises;
@@ -269,79 +271,6 @@ $$;
 -- it returns just id/name/avatar for the trainer — never the email.
 revoke all on function public.invitation_by_token(text) from public;
 grant execute on function public.invitation_by_token(text) to anon, authenticated;
-
--- ---------------------------------------------------------------------------
--- routines
--- ---------------------------------------------------------------------------
-alter table routines enable row level security;
-
-drop policy if exists "routines_select" on routines;
-drop policy if exists "routines_trainer_insert" on routines;
-drop policy if exists "routines_trainer_update" on routines;
-
-create policy "routines_select" on routines
-  for select to authenticated
-  using (
-    trainer_id = auth.uid()
-    or student_id in (select id from students where user_id = auth.uid())
-  );
-
-create policy "routines_trainer_insert" on routines
-  for insert to authenticated
-  with check (trainer_id = auth.uid());
-
-create policy "routines_trainer_update" on routines
-  for update to authenticated
-  using (trainer_id = auth.uid())
-  with check (trainer_id = auth.uid());
-
--- ---------------------------------------------------------------------------
--- routine_exercises — read-only via routine ownership; no writer today.
--- ---------------------------------------------------------------------------
-alter table routine_exercises enable row level security;
-
-drop policy if exists "routine_exercises_select" on routine_exercises;
-
-create policy "routine_exercises_select" on routine_exercises
-  for select to authenticated
-  using (
-    routine_id in (
-      select id from routines
-      where trainer_id = auth.uid()
-         or student_id in (select id from students where user_id = auth.uid())
-    )
-  );
-
--- ---------------------------------------------------------------------------
--- exercises — hybrid catalog (trainer_id null = shared, set = private).
--- ---------------------------------------------------------------------------
-alter table exercises enable row level security;
-
-drop policy if exists "exercises_select" on exercises;
-drop policy if exists "exercises_trainer_insert" on exercises;
-drop policy if exists "exercises_trainer_update" on exercises;
-drop policy if exists "exercises_trainer_delete" on exercises;
-
-create policy "exercises_select" on exercises
-  for select to authenticated
-  using (
-    trainer_id is null
-    or trainer_id = auth.uid()
-    or trainer_id in (select trainer_id from students where user_id = auth.uid())
-  );
-
-create policy "exercises_trainer_insert" on exercises
-  for insert to authenticated
-  with check (trainer_id = auth.uid());
-
-create policy "exercises_trainer_update" on exercises
-  for update to authenticated
-  using (trainer_id = auth.uid())
-  with check (trainer_id = auth.uid());
-
-create policy "exercises_trainer_delete" on exercises
-  for delete to authenticated
-  using (trainer_id = auth.uid());
 
 -- ---------------------------------------------------------------------------
 -- workout_sessions — student-owned only (trainer app does not read these yet).
