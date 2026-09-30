@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { buildAppDeepLink, buildInviteLink } from "./invite";
 
 describe("buildInviteLink", () => {
-  it("points at the /i landing page under the current origin", () => {
+  it("points at the /invite landing page under the current origin", () => {
     expect(buildInviteLink("abc123")).toBe(
-      "https://app.mobvex.test/i/abc123",
+      "https://app.mobvex.test/invite/abc123",
     );
   });
 });
