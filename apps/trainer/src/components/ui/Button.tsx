@@ -43,7 +43,9 @@ export function Button({
       className={cn(
         "inline-flex items-center justify-center gap-2 rounded-input font-display leading-none tracking-[2px]",
         "transition-transform transition-colors duration-150 select-none active:scale-[0.97]",
-        size === "sm" ? "px-[18px] py-[10px] text-[16px]" : "px-6 py-4 text-[20px]",
+        size === "sm"
+          ? "px-[18px] py-[10px] text-[16px]"
+          : "px-4 py-4 text-button-primary-compact sm:px-6 sm:text-button-primary",
         fullWidth ? "w-full" : "w-auto",
         disabled ? "cursor-not-allowed opacity-40" : "cursor-pointer",
         VARIANTS[variant],

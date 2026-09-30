@@ -30,6 +30,13 @@
   --font-display: var(--font-bebas), "Oswald", sans-serif;
   --font-body: var(--font-dm-sans), system-ui, sans-serif;
 
+  /* Primary button label — 20px per the design system, but that's too wide
+     for icon + label CTAs (e.g. "+ CREAR ALUMNO") to fit on one line inside
+     narrow mobile containers. Mobile-first: the compact size is the base
+     `text-button-primary-compact`, restored to the full size at `sm:` and up. */
+  --text-button-primary: 20px;
+  --text-button-primary-compact: 16px;
+
   /* Radius */
   --radius-input: 14px;
   --radius-card: 18px;

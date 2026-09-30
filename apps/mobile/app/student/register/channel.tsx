@@ -46,7 +46,6 @@ export default function ChannelScreen() {
 
   return (
     <Screen contentStyle={styles.screen}>
-      <Text>Holaaaaaa</Text>
       <StepHeader step={1} />
 
       <Text variant="title" style={styles.title}>

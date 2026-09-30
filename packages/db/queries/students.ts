@@ -5,7 +5,6 @@ import type {
   NewStudent,
   Student,
   StudentWithUser,
-  User,
 } from '../types';
 import { createInvitation } from './invitations';
 
@@ -83,18 +82,22 @@ export async function createStudentForTrainer(input: {
   | { data: { student: Student; invitation: Invitation }; error: null }
   | { data: null; error: Error }
 > {
-  const { data: user, error: userError } = await supabase
+  // The `users` row is created before the `students` row that links it to
+  // this trainer, so no SELECT policy on `users` can grant visibility into
+  // it yet — `.select()` on the insert would fail RLS on the RETURNING
+  // clause even though the INSERT itself is allowed. Generate the id
+  // client-side so the row's id is known without reading it back.
+  const userId = crypto.randomUUID();
+  const { error: userError } = await supabase
     .from('users')
-    .insert({ email: input.email, role: 'student', name: input.name })
-    .select()
-    .single<User>();
+    .insert({ id: userId, email: input.email, role: 'student', name: input.name });
   if (userError) return { data: null, error: userError };
 
   const { data: student, error: studentError } = await supabase
     .from('students')
     .insert({
       trainer_id: input.trainerId,
-      user_id: user.id,
+      user_id: userId,
       goal: input.goal,
       active: true,
     })

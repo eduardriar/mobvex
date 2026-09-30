@@ -23,20 +23,6 @@ export type Tip = {
   text: string;
 };
 
-export const TRAINER = {
-  name: 'Carlos Moreno',
-  role: 'Entrenador personal',
-  initials: 'CM',
-} as const;
-
-export const TODAY_ROUTINE = {
-  day: 'Lunes · Día A',
-  name: 'EMPUJE +\nHOMBROS',
-  meta: '6 ejercicios · ~55 min estimado',
-  chips: ['Pecho', 'Hombros', 'Tríceps'],
-  status: 'Sin iniciar',
-} as const;
-
 export const EXPRESS_ROUTINES: ExpressRoutine[] = [
   { id: 'core', time: '15', icon: '⚡', hue: 'green', name: 'Core Activación', meta: '4 ejercicios · sin equipo' },
   { id: 'hiit', time: '20', icon: '🔥', hue: 'orange', name: 'HIIT Total Body', meta: '6 ejercicios · sin equipo' },
@@ -67,11 +53,3 @@ export const TIPS: Tip[] = [
     text: 'Si tu RIR es 3 o más en todas las series, es momento de subir el peso.',
   },
 ];
-
-/** Time-of-day greeting for the dashboard header. */
-export function greeting(date = new Date()): string {
-  const h = date.getHours();
-  if (h < 12) return 'Buenos días,';
-  if (h < 19) return 'Buenas tardes,';
-  return 'Buenas noches,';
-}

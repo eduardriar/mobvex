@@ -1,5 +1,4 @@
 import {
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   View,
@@ -7,6 +6,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from './tokens';
 
 type Props = {
