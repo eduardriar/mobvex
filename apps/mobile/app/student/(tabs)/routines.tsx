@@ -6,6 +6,9 @@ import { RoutineSummaryCard } from '@/components/routines/RoutineSummaryCard';
 import { useAssignedRoutines } from '@/hooks/useAssignedRoutines';
 import { useStartSession } from '@/hooks/useStartSession';
 import { useAuth } from '@/components/auth/AuthProvider';
+import { COPY } from '@/lib/copy';
+
+const T = COPY.routines;
 
 export default function Routines() {
   const router = useRouter();
@@ -13,6 +16,9 @@ export default function Routines() {
   const { routines, loading, refreshing, error, refresh } =
     useAssignedRoutines(studentId);
   const { start, starting } = useStartSession();
+
+  // The plan's name lives on each routine's description (same value per plan).
+  const planName = routines.find((r) => r.description)?.description ?? null;
 
   const handleStart = async (routineId: string) => {
     if (starting || !studentId) return;
@@ -24,8 +30,8 @@ export default function Routines() {
 
   return (
     <ScreenHeader
-      title={'TUS\nRUTINAS'}
-      subtitle="Semana 8 de 12 · Plan Hipertrofia"
+      title={T.title}
+      subtitle={planName ?? T.subtitle}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -38,10 +44,10 @@ export default function Routines() {
       {loading ? (
         <ActivityIndicator color={colors.accent} style={styles.loader} />
       ) : error ? (
-        <Alert message="No pudimos cargar tus rutinas." style={styles.feedback} />
+        <Alert message={T.loadError} style={styles.feedback} />
       ) : routines.length === 0 ? (
         <Text variant="subtitle" style={styles.feedback}>
-          Aún no tienes rutinas asignadas.
+          {T.emptyState}
         </Text>
       ) : (
         <View style={styles.list}>

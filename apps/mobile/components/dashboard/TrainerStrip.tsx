@@ -2,6 +2,9 @@ import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Text, colors } from '@mobvex/ui';
 import { SquareAvatar } from './SquareAvatar';
+import { COPY } from '@/lib/copy';
+
+const T = COPY.home.trainer;
 
 type Props = {
   name: string;
@@ -23,12 +26,12 @@ export function TrainerStrip({ name, role, initials, onMessage }: Props) {
       </View>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Nuevo mensaje"
+        accessibilityLabel={T.newMessage}
         onPress={onMessage}
         style={styles.msg}
       >
         <Feather name="message-square" size={13} color={colors.muted} />
-        <Text variant="cardRole">Nuevo mensaje</Text>
+        <Text variant="cardRole">{T.newMessage}</Text>
       </Pressable>
     </View>
   );

@@ -1,6 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Button, Card, Text, colors, fontSizes, spacing } from '@mobvex/ui';
+import { COPY } from '@/lib/copy';
+
+const T = COPY.routines;
 
 type Props = {
   name: string;
@@ -19,7 +22,7 @@ export function RoutineSummaryCard({ name, exercises, onStart, onMenu }: Props) 
         </Text>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Opciones de la rutina"
+          accessibilityLabel={T.routineOptions}
           hitSlop={8}
           onPress={onMenu}
         >
@@ -32,7 +35,7 @@ export function RoutineSummaryCard({ name, exercises, onStart, onMenu }: Props) 
       </Text>
 
       <Button
-        label="INICIAR RUTINA"
+        label={T.startRoutine}
         variant="primary"
         fullWidth
         onPress={onStart}
